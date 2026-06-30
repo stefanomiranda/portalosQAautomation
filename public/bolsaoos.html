@@ -35,6 +35,7 @@
         .env-tag.TI   { background: #e8f5e9; color: #1a5c2a; border: 1px solid #28a745; }
         .env-tag.TRG2 { background: #e3f2fd; color: #0d3c6e; border: 1px solid #1976d2; }
 
+        /* ── Cabeçalho ── */
         .orders-header {
             display: flex;
             align-items: center;
@@ -51,6 +52,74 @@
             padding: 4px 12px;
             border-radius: 12px;
         }
+
+        /* ── Barra de filtros ── */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+        }
+        .filter-bar label {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #495057;
+            white-space: nowrap;
+        }
+        .filter-bar select {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            font-size: 0.9em;
+            background: #fff;
+            cursor: pointer;
+        }
+        .filter-bar select:focus {
+            outline: none;
+            border-color: #FFD700;
+            box-shadow: 0 0 0 2px rgba(255,215,0,0.25);
+        }
+
+        /* ── Botão expurgo ── */
+        .btn-expurgo {
+            margin-left: auto;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid #dc3545;
+            background: #fff;
+            color: #dc3545;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-expurgo:hover {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        /* ── Card vencido ── */
+        .order-card.vencida {
+            opacity: 0.55;
+            border-left: 4px solid #dc3545;
+        }
+        .badge-vencida {
+            display: inline-block;
+            background: #dc3545;
+            color: #fff;
+            font-size: 0.72em;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -61,10 +130,37 @@
     <h1>📦 Bolsão de OS</h1>
 
     <div class="section" id="osListSection">
+
         <div class="orders-header">
-            <h2 style="margin:0; border:none; padding:0; font-size:1.2em;">Ordens de Serviço Criadas</h2>
+            <h2 style="margin:0; border:none; padding:0; font-size:1.2em;">
+                Ordens de Serviço Criadas
+            </h2>
             <span class="orders-count" id="ordersCount">Carregando...</span>
         </div>
+
+        <!-- ✅ Barra de filtros + botão de expurgo -->
+        <div class="filter-bar">
+            <label for="filtroAmbiente">🌐 Ambiente:</label>
+            <select id="filtroAmbiente">
+                <option value="TODOS">Todos</option>
+                <option value="TRG">🟡 TRG</option>
+                <option value="TI">🟢 TI</option>
+                <option value="TRG2">🔵 TRG2</option>
+            </select>
+
+            <label for="filtroStatus" style="margin-left:10px;">📋 Status:</label>
+            <select id="filtroStatus">
+                <option value="TODOS">Todas</option>
+                <option value="ATIVAS">Somente Ativas</option>
+                <option value="VENCIDAS">Somente Vencidas</option>
+            </select>
+
+            <!-- ✅ Expurgar vencidas -->
+            <button class="btn-expurgo" id="btnExpurgo" title="Remove do bolsão as OS com agendamento vencido">
+                🗑️ Expurgar Vencidas
+            </button>
+        </div>
+
         <div class="message hidden"></div>
         <div id="osListContainer">
             <p class="info">Carregando Ordens de Serviço...</p>

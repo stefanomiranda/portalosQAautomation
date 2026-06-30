@@ -3,7 +3,7 @@
 const ENVIRONMENTS = {
     TRG:  'https://apitrg.vtal.com.br',
     TI:   'https://api-ti1.vtal.com.br',
-    TRG2: 'https://api-ti2.vtal.com.br'
+    TRG2: 'https://api-reg.vtal.com.br'
 };
 
 function getConfigForEnv(ambiente = 'TRG') {

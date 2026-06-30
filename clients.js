@@ -32,8 +32,8 @@ const CLIENTS = {
                 "client_secret": "768bcd8d-ea07-450e-a034-ddb29c12ef7d"
             },
             "TRG2": {
-                "client_id":     "mGL9QZsX3hh7HpRg9Ochzd0qq8xfApoo5AVPPwT58NwDmLh4",
-                "client_secret": "H5BNxYIj6SgvEUqF6awfZmW3mtGCwN2qixKEq5WrKZ32qIsk8GAIvm1BVHUwfUHw"
+                "client_id":     "pJ1cLnwCRq3jTq4DdTpKqGAdXARyFjNnRiOeadJjlkougL4S",
+                "client_secret": "ZzQi6bdZOZRTFwRCpMfh0JZS5GdvvCQZm3CAmreKsa3KBFMimi6Yu04Euj1Te5F5"
             }
         }
     },
