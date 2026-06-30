@@ -299,45 +299,58 @@ app.post('/api/criar-os', async (req, res) => {
         );
 
         if (osResult && osResult.order && osResult.order.id) {
+
+            // ✅ Fallback garantido no bolsão
+            const associatedDocument =
+                osResult.order.associatedDocument || subscriberId;
+
             const newOrder = {
                 orderId:            osResult.order.id,
                 saId:               agendamentoId,
                 correlationOrder:   osResult.order.correlationOrder,
-                associatedDocument: osResult.order.associatedDocument,
+                associatedDocument, // ✅ sempre preenchido
                 cp:                 cp_selection,
                 ambiente:           ambienteResolvido,
                 subscriberId:       subscriberId,
                 productName:        produtoSelecionado.name,
                 productCatalogId:   produtoSelecionado.catalogId,
                 address: {
-                    streetName:      enderecoDetalhes.streetName,
-                    streetNr:        enderecoDetalhes.streetNr,
-                    neighborhood:    enderecoDetalhes.neighborhood,
-                    locality:        enderecoDetalhes.locality,
-                    stateOrProvince: enderecoDetalhes.stateOrProvince,
-                    postcode:        enderecoDetalhes.postcode,
-                    description:     enderecoDetalhes.description
+                    // ✅ optional chaining — nunca quebra
+                    streetName:      enderecoDetalhes?.streetName      || '',
+                    streetNr:        enderecoDetalhes?.streetNr        || '',
+                    neighborhood:    enderecoDetalhes?.neighborhood    || '',
+                    locality:        enderecoDetalhes?.locality        || '',
+                    stateOrProvince: enderecoDetalhes?.stateOrProvince || '',
+                    postcode:        enderecoDetalhes?.postcode        || '',
+                    description:     enderecoDetalhes?.description     || ''
                 },
                 complement:   complementoSelecionado,
                 slotDate:     slotSelecionado.startDate,
                 creationDate: new Date().toISOString()
             };
+
+            // ✅ Salva no bolsão
             createdOrders.push(newOrder);
 
-            console.log('[APP] Ordem de Serviço armazenada no Bolsão:', newOrder);
+            console.log(`[APP] ✅ OS salva no bolsão. Total: ${createdOrders.length}`);
+            console.log('[APP] OS criada:', JSON.stringify(newOrder, null, 2));
 
             res.json({
                 status:             'sucesso',
                 message:            'Ordem de Serviço criada com sucesso!',
                 orderId:            osResult.order.id,
                 saId:               agendamentoId,
-                associatedDocument: osResult.order.associatedDocument || subscriberId, // ✅ fallback para subscriberId
-                subscriberId:       subscriberId, // ✅ envia explicitamente
+                associatedDocument,      // ✅ fallback garantido
+                subscriberId:       subscriberId, // ✅ explícito para o frontend
                 ambiente:           ambienteResolvido
             });
+
         } else {
-            console.error('[APP] Resposta inesperada da API de Ordem de Serviço:', osResult);
-            res.status(500).json({ status: 'erro', message: 'Erro ao criar Ordem de Serviço: ID não retornado pela API.' });
+            console.error('[APP] Resposta inesperada da API de OS:', osResult);
+            res.status(500).json({
+                status:  'erro',
+                message: 'Erro ao criar Ordem de Serviço: ID não retornado pela API.'
+            });
         }
     } catch (error) {
         console.error('[APP] Erro ao criar Ordem de Serviço:', error.message);
