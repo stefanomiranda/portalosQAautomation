@@ -530,19 +530,33 @@ async function criarOrdemDeServico() {
         const data = await response.json();
 
         if (data.status === 'sucesso') {
-            document.getElementById('finalOrderId').textContent          = data.orderId;
-            document.getElementById('finalSaId').textContent            = data.saId;
-            document.getElementById('finalAssociatedDocument').textContent = data.associatedDocument;
+            document.getElementById('finalOrderId').textContent = data.orderId;
+            document.getElementById('finalSaId').textContent    = data.saId;
+
+            // ✅ Cadeia de fallback garantida:
+            // 1. associatedDocument retornado pela API
+            // 2. subscriberId retornado pelo backend
+            // 3. subscriberId que o frontend enviou na requisição
+            // 4. 'N/A' se nenhum estiver disponível
+            document.getElementById('finalAssociatedDocument').textContent =
+                data.associatedDocument  ||
+                data.subscriberId        ||
+                currentSubscriberId      ||
+                'N/A';
+
+            document.getElementById('createOrderBtn').disabled = true;
             showMessage(`✅ Ordem de Serviço criada com sucesso! ID: ${data.orderId}`, 'success');
+
         } else {
             document.getElementById('createOrderBtn').disabled = false;
             showMessage(`❌ Erro ao criar OS: ${data.message}`, 'error');
         }
-    } catch (error) {
-        console.error('Erro ao criar OS:', error);
-        document.getElementById('createOrderBtn').disabled = false;
-        showMessage('❌ Erro ao criar Ordem de Serviço: ' + error.message, 'error');
-    }
+
+        } catch (error) {
+            console.error('Erro ao criar OS:', error);
+            document.getElementById('createOrderBtn').disabled = false;
+            showMessage('❌ Erro ao criar Ordem de Serviço: ' + error.message, 'error');
+        }
 }
 
 // ─────────────────────────────────────────────

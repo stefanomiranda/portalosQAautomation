@@ -331,7 +331,8 @@ app.post('/api/criar-os', async (req, res) => {
                 message:            'Ordem de Serviço criada com sucesso!',
                 orderId:            osResult.order.id,
                 saId:               agendamentoId,
-                associatedDocument: osResult.order.associatedDocument,
+                associatedDocument: osResult.order.associatedDocument || subscriberId, // ✅ fallback para subscriberId
+                subscriberId:       subscriberId, // ✅ envia explicitamente
                 ambiente:           ambienteResolvido
             });
         } else {
