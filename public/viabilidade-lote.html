@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-version="202606270344"> <!-- ADICIONE ESTE ATRIBUTO data-version -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal - Viabilidade em Lote</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <button class="home-button" onclick="location.href='/'">
+            <h1>Portal V.tal - Viabilidade em Lote</h1>
+        </button>
+
+        <div id="viabilidadeLoteSection" class="section">
+            <h2>Processar Viabilidade em Lote</h2>
+            <p>Faça o upload de uma planilha Excel (.xlsx) contendo os endereços para verificar a viabilidade e disponibilidade de slots. A planilha deve conter as colunas: <strong>CEP</strong>, <strong>FACHADA</strong>, <strong>ENDEREÇO</strong> e <strong>COMPLEMENTOS</strong>.</p>
+
+            <div class="form-group">
+                <label for="cpSelect">Selecione o CP:</label>
+                <select id="cpSelect" class="select-field">
+                    <!-- Opções de CP serão carregadas via JavaScript -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="spreadsheetFile">Selecione o arquivo Excel:</label>
+                <input type="file" id="spreadsheetFile" accept=".xlsx, .xls">
+                <span id="fileNameDisplay" class="file-name-display">Nenhum arquivo selecionado</span>
+            </div>
+
+            <button id="processSpreadsheetBtn" class="btn btn-primary" disabled>Processar Planilha</button>
+            <button id="downloadResultBtn" class="btn btn-secondary hidden" disabled>Baixar Resultado</button>
+
+            <div id="statusMessage" class="message hidden"></div>
+        </div>
+    </div>
+
+    <!-- ADICIONE O ATRIBUTO 'defer' E UM NOVO PARÂMETRO DE VERSÃO AQUI! -->
+    <script src="/js/viabilidadeLote.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal - Criação de OS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <button class="home-button" onclick="location.href='/'">
+            <h1>Portal V.tal - Criação de OS</h1>
+        </button>
+        <div id="app">
+            <!-- Seção de Seleção de CP e Consulta de Endereço -->
+            <div id="addressConsultation" class="section">
+                <h2>1. Consultar Endereço</h2>
+                <label for="cpSelect">CP (Client Partner):</label>
+                <select id="cpSelect" disabled>
+                    <option value="">Carregando CPs...</option>
+                </select>
+                <label for="cepInput">CEP:</label>
+                <input type="text" id="cepInput" placeholder="Digite o CEP" value="22793913">
+                <label for="numeroInput">Número da Fachada:</label>
+                <input type="number" id="numeroInput" placeholder="Número" value="199">
+                <button onclick="consultarEndereco()">Consultar Endereço</button>
+                <div id="addressMessage" class="message hidden"></div>
+            </div>
+
+            <!-- Seção de Escolha de Complemento -->
+            <div id="complementSelection" class="section hidden">
+                <h2>2. Escolha o Complemento</h2>
+                <p>Endereço: <span id="enderecoDisplay"></span></p>
+                <div id="complementList">
+                    <!-- Complementos serão carregados aqui -->
+                </div>
+                <button onclick="showSection('addressConsultation')">Voltar</button>
+                <button id="confirmComplementBtn" onclick="confirmarComplemento()" disabled>Confirmar Complemento</button>
+                <div id="complementMessage" class="message hidden"></div>
+            </div>
+
+            <!-- Seção de Escolha de Produto -->
+            <div id="productSelection" class="section hidden">
+                <h2>3. Escolha o Produto</h2>
+                <div id="productList">
+                    <!-- Produtos serão carregados aqui -->
+                </div>
+                <button onclick="showSection('complementSelection')">Voltar</button>
+                <button id="confirmProductBtn" onclick="confirmarProduto()" disabled>Confirmar Produto</button>
+                <div id="productMessage" class="message hidden"></div>
+            </div>
+
+            <!-- Seção de Escolha de Slot de Instalação -->
+            <div id="slotSelection" class="section hidden">
+                <h2>4. Escolha o Slot de Instalação</h2>
+                <div id="slotList">
+                    <!-- Slots serão carregados aqui -->
+                </div>
+                <button onclick="showSection('productSelection')">Voltar</button>
+                <button id="confirmSlotBtn" onclick="confirmarSlot()" disabled>Confirmar Slot</button>
+                <div id="slotMessage" class="message hidden"></div>
+            </div>
+
+            <!-- Seção de Confirmação da Ordem de Serviço -->
+            <div id="orderConfirmation" class="section hidden">
+                <h2>5. Confirmação da Ordem de Serviço</h2>
+                <p><strong>Endereço:</strong> <span id="confirmAddress"></span></p>
+                <p><strong>Complemento:</strong> <span id="confirmComplement"></span></p>
+                <p><strong>Produto Selecionado:</strong> <span id="confirmProduct"></span></p>
+                <p><strong>Slot de Agendamento:</strong> <span id="confirmSlot"></span></p>
+                <p><strong>ID da Ordem de Serviço:</strong> <span id="finalOrderId"></span></p>
+                <p><strong>ID do Agendamento (SA):</strong> <span id="finalSaId"></span></p>
+                <p><strong>Documento Associado:</strong> <span id="finalAssociatedDocument"></span></p>
+
+                <div class="message" id="orderConfirmationMessage"></div>
+                <button type="button" onclick="showSection('slotSelection')">Voltar</button>
+                <button type="button" id="createOrderBtn" onclick="criarOrdemDeServico()">Criar Ordem de Serviço</button>
+                <button type="button" onclick="resetFlow()">Nova Consulta</button>
+            </div>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal - Bolsão de OS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Título que também serve como botão para a home -->
+        <button class="home-button" onclick="location.href='/'">
+            <h1>Portal V.tal - Bolsão de OS</h1>
+        </button>
+
+        <div id="osListSection" class="section">
+            <h2>Ordens de Serviço Criadas</h2>
+            <div id="osListContainer">
+                <!-- As ordens de serviço serão carregadas aqui pelo JavaScript -->
+                <p>Carregando Ordens de Serviço...</p>
+            </div>
+            <div class="message hidden"></div>
+        </div>
+    </div>
+    <script src="/bolsaoOs.js"></script>
+</body>
+</html>
