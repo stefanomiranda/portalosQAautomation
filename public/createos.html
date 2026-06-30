@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal - Criar OS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .env-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.82em;
+            font-weight: 700;
+            margin-bottom: 18px;
+            letter-spacing: 0.5px;
+        }
+        .env-badge.TRG  { background: #fff8e1; color: #7a6000; border: 1.5px solid #FFD700; }
+        .env-badge.TI   { background: #e8f5e9; color: #1a5c2a; border: 1.5px solid #28a745; }
+        .env-badge.TRG2 { background: #e3f2fd; color: #0d3c6e; border: 1.5px solid #1976d2; }
+        .env-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .TRG  .env-dot { background: #FFD700; }
+        .TI   .env-dot { background: #28a745; }
+        .TRG2 .env-dot { background: #1976d2; }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .step-circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #e9ecef;
+            color: #adb5bd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95em;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s;
+            z-index: 1;
+        }
+        .step.active   .step-circle { background: #FFD700; color: #212529; border-color: #FFD700; }
+        .step.done     .step-circle { background: #28a745; color: #fff;    border-color: #28a745; }
+        .step-label {
+            font-size: 0.72em;
+            color: #adb5bd;
+            margin-top: 5px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .step.active .step-label { color: #212529; font-weight: 600; }
+        .step.done   .step-label { color: #28a745; }
+        .step-line {
+            width: 40px;
+            height: 2px;
+            background: #dee2e6;
+            margin-bottom: 18px;
+            transition: background 0.3s;
+        }
+        .step-line.done { background: #28a745; }
+
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88em;
+            color: #495057;
+            text-decoration: none;
+            margin-bottom: 20px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            transition: all 0.2s;
+        }
+        .back-home:hover { background: #f8f9fa; border-color: #adb5bd; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Navegação de volta -->
+    <a href="index.html" class="back-home">← Voltar ao Início</a>
+
+    <!-- Título -->
+    <h1>📋 Criar Ordem de Serviço</h1>
+
+    <!-- Badge de ambiente -->
+    <div style="text-align:center;">
+        <span class="env-badge TRG" id="envBadge">
+            <span class="env-dot"></span>
+            <span id="envBadgeText">TRG</span>
+        </span>
+    </div>
+
+    <!-- Indicador de etapas -->
+    <div class="step-indicator" id="stepIndicator">
+        <div class="step active" id="step1"><div class="step-circle">1</div><div class="step-label">Endereço</div></div>
+        <div class="step-line"   id="line1"></div>
+        <div class="step"        id="step2"><div class="step-circle">2</div><div class="step-label">Complemento</div></div>
+        <div class="step-line"   id="line2"></div>
+        <div class="step"        id="step3"><div class="step-circle">3</div><div class="step-label">Produto</div></div>
+        <div class="step-line"   id="line3"></div>
+        <div class="step"        id="step4"><div class="step-circle">4</div><div class="step-label">Slot</div></div>
+        <div class="step-line"   id="line4"></div>
+        <div class="step"        id="step5"><div class="step-circle">5</div><div class="step-label">Confirmação</div></div>
+    </div>
+
+    <!-- Mensagem global -->
+    <div id="globalMessage" class="message hidden"></div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SEÇÃO 1 — Consulta de Endereço         -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section" id="addressConsultation">
+        <h2>1. Consultar Endereço</h2>
+        <label for="cpSelect">CP (Client Partner):</label>
+        <select id="cpSelect">
+            <option value="">Carregando CPs...</option>
+        </select>
+
+        <label for="cepInput">CEP:</label>
+        <input type="text" id="cepInput" placeholder="Ex: 01310-100" maxlength="9">
+
+        <label for="numeroInput">Número da Fachada:</label>
+        <input type="text" id="numeroInput" placeholder="Ex: 123">
+
+        <button onclick="consultarEndereco()" id="consultarBtn">🔍 Consultar Endereço</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SEÇÃO 2 — Complemento                  -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section hidden" id="complementSelection">
+        <h2>2. Escolha o Complemento</h2>
+        <p><strong>Endereço:</strong> <span id="enderecoDisplay"></span></p>
+        <div id="complementList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('addressConsultation', 1)">← Voltar</button>
+            <button onclick="confirmarComplemento()" id="confirmComplementBtn" disabled>Confirmar Complemento →</button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SEÇÃO 3 — Produto                      -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section hidden" id="productSelection">
+        <h2>3. Escolha o Produto</h2>
+        <div id="productList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('complementSelection', 2)">← Voltar</button>
+            <button onclick="confirmarProduto()" id="confirmProductBtn" disabled>Confirmar Produto →</button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SEÇÃO 4 — Slot                         -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section hidden" id="slotSelection">
+        <h2>4. Escolha o Slot de Instalação</h2>
+        <div id="slotList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('productSelection', 3)">← Voltar</button>
+            <button onclick="confirmarSlot()" id="confirmSlotBtn" disabled>Confirmar Slot →</button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SEÇÃO 5 — Confirmação                  -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section hidden" id="orderConfirmation">
+        <h2>5. Confirmação da Ordem de Serviço</h2>
+        <div id="orderConfirmation">
+            <p><strong>Ambiente:</strong> <span id="confirmAmbiente"></span></p>
+            <p><strong>Endereço:</strong> <span id="confirmAddress"></span></p>
+            <p><strong>Complemento:</strong> <span id="confirmComplement"></span></p>
+            <p><strong>Produto Selecionado:</strong> <span id="confirmProduct"></span></p>
+            <p><strong>Slot de Agendamento:</strong> <span id="confirmSlot"></span></p>
+            <hr>
+            <p><strong>ID da Ordem de Serviço:</strong> <span id="finalOrderId" style="color:#28a745; font-weight:700;"></span></p>
+            <p><strong>ID do Agendamento (SA):</strong> <span id="finalSaId"></span></p>
+            <p><strong>Documento Associado:</strong> <span id="finalAssociatedDocument"></span></p>
+        </div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('slotSelection', 4)">← Voltar</button>
+            <button onclick="criarOrdemDeServico()" id="createOrderBtn">✅ Criar Ordem de Serviço</button>
+            <button onclick="resetFlow()">🔄 Nova Consulta</button>
+        </div>
+    </div>
+
+</div>
+<script src="js/main.js"></script>
+</body>
+</html>
