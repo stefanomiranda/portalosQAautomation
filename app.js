@@ -17,20 +17,31 @@ const PORT = process.env.PORT || 8080;
 // ─────────────────────────────────────────────
 // Middlewares
 // ─────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, 'public'))); // ✅ Apenas uma declaração
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 // ─────────────────────────────────────────────
 // Estado em memória
+// ✅ globalSubscriberIdCounter REMOVIDO — não é mais necessário
 // ─────────────────────────────────────────────
-let globalSubscriberIdCounter = 103;
 const createdOrders = [];
+
+// ─────────────────────────────────────────────
+// ✅ Gerador de subscriberId único e sem estado
+// ─────────────────────────────────────────────
+function gerarSubscriberId() {
+    const tsPart   = String(Date.now()).slice(-8);
+    const randPart = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+    const subscriberId = `TDMQAOSS${tsPart}${randPart}`;
+    console.log(`[APP] SubscriberId gerado: ${subscriberId}`);
+    return subscriberId;
+}
 
 // ─────────────────────────────────────────────
 // HELPER: valida e retorna o ambiente recebido
 // ─────────────────────────────────────────────
 function resolveAmbiente(ambiente) {
-    const VALID = ['TRG', 'TI', 'TRG2'];
+    const VALID    = ['TRG', 'TI', 'TRG2'];
     const resolved = String(ambiente || 'TRG').trim().toUpperCase();
     if (!VALID.includes(resolved)) {
         console.warn(`[APP] Ambiente inválido recebido: "${ambiente}". Usando TRG como fallback.`);
@@ -77,7 +88,7 @@ app.post('/api/consultar-endereco', async (req, res) => {
         const enderecoResult = await buscarEndereco(cep, numero, accessToken, ambienteResolvido);
         console.log('[APP] Resposta completa de buscarEndereco:', JSON.stringify(enderecoResult, null, 2));
 
-        let addressId = null;
+        let addressId       = null;
         let enderecoDetalhes = null;
 
         if (
@@ -87,11 +98,11 @@ app.post('/api/consultar-endereco', async (req, res) => {
             enderecoResult.addresses.address.length > 0
         ) {
             enderecoDetalhes = enderecoResult.addresses.address[0];
-            addressId = enderecoDetalhes.id;
+            addressId        = enderecoDetalhes.id;
         } else {
             return res.status(404).json({
-                status: 'erro',
-                message: 'Endereço não encontrado ou sem detalhes.',
+                status:   'erro',
+                message:  'Endereço não encontrado ou sem detalhes.',
                 endereco: enderecoResult
             });
         }
@@ -102,27 +113,27 @@ app.post('/api/consultar-endereco', async (req, res) => {
         console.log('[APP] Complementos enviados para o frontend:', complementos);
 
         const enderecoFormatado = {
-            id: enderecoDetalhes.id,
-            description: enderecoDetalhes.description,
-            streetName: enderecoDetalhes.streetName,
-            streetNr: enderecoDetalhes.number,
-            neighborhood: enderecoDetalhes.neighborhood,
-            locality: enderecoDetalhes.city,
+            id:              enderecoDetalhes.id,
+            description:     enderecoDetalhes.description,
+            streetName:      enderecoDetalhes.streetName,
+            streetNr:        enderecoDetalhes.number,
+            neighborhood:    enderecoDetalhes.neighborhood,
+            locality:        enderecoDetalhes.city,
             stateOrProvince: enderecoDetalhes.stateAbbreviation,
-            postcode: enderecoDetalhes.zipCode
+            postcode:        enderecoDetalhes.zipCode
         };
 
-        globalSubscriberIdCounter++;
-        const subscriberId = `TDMQUALIDADEOSS${String(globalSubscriberIdCounter).padStart(3, '0')}`;
+        // ✅ Gera subscriberId único sem estado — seguro para multi-pod e restart
+        const subscriberId = gerarSubscriberId();
 
         res.json({
-            status: 'sucesso',
-            endereco: enderecoFormatado,
-            addressId: addressId,
+            status:      'sucesso',
+            endereco:    enderecoFormatado,
+            addressId:   addressId,
             complementos: complementos,
             accessToken: accessToken,
             subscriberId: subscriberId,
-            ambiente: ambienteResolvido
+            ambiente:    ambienteResolvido
         });
 
     } catch (error) {
@@ -160,17 +171,17 @@ app.post('/api/verificar-disponibilidade', async (req, res) => {
 
         if (control && control.type === 'S') {
             res.json({
-                status: 'sucesso',
-                message: control.message,
-                products: resource.products ? resource.products.product : [],
+                status:      'sucesso',
+                message:     control.message,
+                products:    resource.products ? resource.products.product : [],
                 inventoryId: resource.inventoryId,
                 accessToken: accessToken,
                 subscriberId: subscriberId,
-                ambiente: ambienteResolvido
+                ambiente:    ambienteResolvido
             });
         } else {
             res.status(400).json({
-                status: 'erro',
+                status:  'erro',
                 message: control && control.message ? control.message : 'Erro desconhecido ao verificar disponibilidade.',
                 control: control
             });
@@ -204,9 +215,9 @@ app.post('/api/buscar-slots', async (req, res) => {
 
         if (slotsResult && slotsResult.slots && slotsResult.slots.length > 0) {
             res.json({
-                status: 'sucesso',
-                message: 'Slots disponíveis encontrados.',
-                slots: slotsResult.slots,
+                status:   'sucesso',
+                message:  'Slots disponíveis encontrados.',
+                slots:    slotsResult.slots,
                 ambiente: ambienteResolvido
             });
         } else {
@@ -234,15 +245,15 @@ app.post('/api/agendar-slot', async (req, res) => {
 
         if (agendamentoResult && agendamentoResult.control && agendamentoResult.control.type === 'S') {
             res.json({
-                status: 'sucesso',
-                message: agendamentoResult.control.message,
+                status:        'sucesso',
+                message:       agendamentoResult.control.message,
                 agendamentoId: agendamentoResult.appointment ? agendamentoResult.appointment.id : null,
-                accessToken: accessToken,
-                ambiente: ambienteResolvido
+                accessToken:   accessToken,
+                ambiente:      ambienteResolvido
             });
         } else {
             res.status(400).json({
-                status: 'erro',
+                status:  'erro',
                 message: agendamentoResult?.control?.message || 'Erro desconhecido ao agendar slot.',
                 control: agendamentoResult ? agendamentoResult.control : null
             });
@@ -289,15 +300,15 @@ app.post('/api/criar-os', async (req, res) => {
 
         if (osResult && osResult.order && osResult.order.id) {
             const newOrder = {
-                orderId:          osResult.order.id,
-                saId:             agendamentoId,
-                correlationOrder: osResult.order.correlationOrder,
+                orderId:            osResult.order.id,
+                saId:               agendamentoId,
+                correlationOrder:   osResult.order.correlationOrder,
                 associatedDocument: osResult.order.associatedDocument,
-                cp:               cp_selection,
-                ambiente:         ambienteResolvido,
-                subscriberId:     subscriberId,
-                productName:      produtoSelecionado.name,
-                productCatalogId: produtoSelecionado.catalogId,
+                cp:                 cp_selection,
+                ambiente:           ambienteResolvido,
+                subscriberId:       subscriberId,
+                productName:        produtoSelecionado.name,
+                productCatalogId:   produtoSelecionado.catalogId,
                 address: {
                     streetName:      enderecoDetalhes.streetName,
                     streetNr:        enderecoDetalhes.streetNr,
@@ -307,8 +318,8 @@ app.post('/api/criar-os', async (req, res) => {
                     postcode:        enderecoDetalhes.postcode,
                     description:     enderecoDetalhes.description
                 },
-                complement:  complementoSelecionado,
-                slotDate:    slotSelecionado.startDate,
+                complement:   complementoSelecionado,
+                slotDate:     slotSelecionado.startDate,
                 creationDate: new Date().toISOString()
             };
             createdOrders.push(newOrder);
@@ -351,8 +362,8 @@ app.post('/api/upload-viabilidade-lote', upload.single('spreadsheet'), async (re
         return res.status(400).json({ status: 'erro', message: 'Nenhum arquivo enviado.' });
     }
 
-    const cp_selection    = String(req.body.cp_selection || '').trim();
-    const ambiente        = String(req.body.ambiente || 'TRG').trim();
+    const cp_selection      = String(req.body.cp_selection || '').trim();
+    const ambiente          = String(req.body.ambiente || 'TRG').trim();
     const ambienteResolvido = resolveAmbiente(ambiente);
 
     if (!cp_selection) {
@@ -369,8 +380,8 @@ app.post('/api/upload-viabilidade-lote', upload.single('spreadsheet'), async (re
         const fileName = path.basename(result.resultFilePath || result);
 
         return res.json({
-            status:  'sucesso',
-            message: 'Planilha processada com sucesso!',
+            status:   'sucesso',
+            message:  'Planilha processada com sucesso!',
             fileName,
             ambiente: ambienteResolvido
         });
