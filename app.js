@@ -10,18 +10,24 @@ const multer = require('multer');
 const { processarPlanilhaViabilidade } = require('./core/viabilidadeLoteProcessor');
 
 const app = express();
-const PORT = 3000; // ✅ localhost:3000 para ambiente de teste
 
-app.use(express.static(path.join(__dirname, 'public')));
+// ✅ OpenShift injeta a porta via process.env.PORT — fallback 8080 para local
+const PORT = process.env.PORT || 8080;
+
+// ─────────────────────────────────────────────
+// Middlewares
+// ─────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public'))); // ✅ Apenas uma declaração
 app.use(express.json());
 
-// Contador para gerar subscriberId único
+// ─────────────────────────────────────────────
+// Estado em memória
+// ─────────────────────────────────────────────
 let globalSubscriberIdCounter = 103;
 const createdOrders = [];
 
 // ─────────────────────────────────────────────
 // HELPER: valida e retorna o ambiente recebido
-// Se não informado ou inválido, usa 'TRG' como default
 // ─────────────────────────────────────────────
 function resolveAmbiente(ambiente) {
     const VALID = ['TRG', 'TI', 'TRG2'];
@@ -52,7 +58,7 @@ app.get('/api/cps', (req, res) => {
 // POST /api/consultar-endereco
 // ─────────────────────────────────────────────
 app.post('/api/consultar-endereco', async (req, res) => {
-    const { cp_selection, cep, numero, ambiente } = req.body; // ✅ recebe ambiente
+    const { cp_selection, cep, numero, ambiente } = req.body;
     const ambienteResolvido = resolveAmbiente(ambiente);
 
     if (!cp_selection || !cep || !numero) {
@@ -60,7 +66,6 @@ app.post('/api/consultar-endereco', async (req, res) => {
     }
 
     try {
-        // ✅ repassa ambienteResolvido para getTokenForCp
         const tokenData = await getTokenForCp(cp_selection, CLIENTS, ambienteResolvido);
         console.log('[APP] Dados do Token recebidos:', JSON.stringify(tokenData, null, 2));
 
@@ -69,7 +74,6 @@ app.post('/api/consultar-endereco', async (req, res) => {
         }
         const accessToken = tokenData.access_token;
 
-        // ✅ repassa ambienteResolvido para buscarEndereco
         const enderecoResult = await buscarEndereco(cep, numero, accessToken, ambienteResolvido);
         console.log('[APP] Resposta completa de buscarEndereco:', JSON.stringify(enderecoResult, null, 2));
 
@@ -92,7 +96,6 @@ app.post('/api/consultar-endereco', async (req, res) => {
             });
         }
 
-        // ✅ repassa ambienteResolvido para buscarComplementos
         const complementos = addressId
             ? await buscarComplementos(addressId, accessToken, ambienteResolvido)
             : [];
@@ -119,7 +122,7 @@ app.post('/api/consultar-endereco', async (req, res) => {
             complementos: complementos,
             accessToken: accessToken,
             subscriberId: subscriberId,
-            ambiente: ambienteResolvido // ✅ retorna o ambiente confirmado ao frontend
+            ambiente: ambienteResolvido
         });
 
     } catch (error) {
@@ -132,7 +135,7 @@ app.post('/api/consultar-endereco', async (req, res) => {
 // POST /api/verificar-disponibilidade
 // ─────────────────────────────────────────────
 app.post('/api/verificar-disponibilidade', async (req, res) => {
-    const { cp_selection, addressId, complementoSelecionado, accessToken, subscriberId, ambiente } = req.body; // ✅
+    const { cp_selection, addressId, complementoSelecionado, accessToken, subscriberId, ambiente } = req.body;
     const ambienteResolvido = resolveAmbiente(ambiente);
 
     if (!cp_selection || !addressId || !accessToken || !subscriberId) {
@@ -143,7 +146,6 @@ app.post('/api/verificar-disponibilidade', async (req, res) => {
     }
 
     try {
-        // ✅ repassa ambienteResolvido para verificarDisponibilidade
         const disponibilidadeResult = await verificarDisponibilidade(
             addressId,
             complementoSelecionado,
@@ -153,7 +155,7 @@ app.post('/api/verificar-disponibilidade', async (req, res) => {
             ambienteResolvido
         );
 
-        const control = disponibilidadeResult.control;
+        const control  = disponibilidadeResult.control;
         const resource = disponibilidadeResult.resource;
 
         if (control && control.type === 'S') {
@@ -164,7 +166,7 @@ app.post('/api/verificar-disponibilidade', async (req, res) => {
                 inventoryId: resource.inventoryId,
                 accessToken: accessToken,
                 subscriberId: subscriberId,
-                ambiente: ambienteResolvido // ✅ retorna o ambiente confirmado
+                ambiente: ambienteResolvido
             });
         } else {
             res.status(400).json({
@@ -183,7 +185,7 @@ app.post('/api/verificar-disponibilidade', async (req, res) => {
 // POST /api/buscar-slots
 // ─────────────────────────────────────────────
 app.post('/api/buscar-slots', async (req, res) => {
-    const { cp_selection, addressId, subscriberId, productType, accessToken, ambiente } = req.body; // ✅
+    const { cp_selection, addressId, subscriberId, productType, accessToken, ambiente } = req.body;
     const ambienteResolvido = resolveAmbiente(ambiente);
 
     if (!cp_selection || !addressId || !subscriberId || !productType || !accessToken) {
@@ -191,7 +193,6 @@ app.post('/api/buscar-slots', async (req, res) => {
     }
 
     try {
-        // ✅ repassa ambienteResolvido para buscarSlotsDisponiveis
         const slotsResult = await buscarSlotsDisponiveis(
             addressId,
             subscriberId,
@@ -206,7 +207,7 @@ app.post('/api/buscar-slots', async (req, res) => {
                 status: 'sucesso',
                 message: 'Slots disponíveis encontrados.',
                 slots: slotsResult.slots,
-                ambiente: ambienteResolvido // ✅ retorna o ambiente confirmado
+                ambiente: ambienteResolvido
             });
         } else {
             res.status(404).json({ status: 'erro', message: 'Nenhum slot disponível encontrado.' });
@@ -221,7 +222,7 @@ app.post('/api/buscar-slots', async (req, res) => {
 // POST /api/agendar-slot
 // ─────────────────────────────────────────────
 app.post('/api/agendar-slot', async (req, res) => {
-    const { cp_selection, slotId, accessToken, ambiente } = req.body; // ✅
+    const { cp_selection, slotId, accessToken, ambiente } = req.body;
     const ambienteResolvido = resolveAmbiente(ambiente);
 
     if (!cp_selection || !slotId || !accessToken) {
@@ -229,7 +230,6 @@ app.post('/api/agendar-slot', async (req, res) => {
     }
 
     try {
-        // ✅ repassa ambienteResolvido para agendarSlot
         const agendamentoResult = await agendarSlot(slotId, accessToken, cp_selection, ambienteResolvido);
 
         if (agendamentoResult && agendamentoResult.control && agendamentoResult.control.type === 'S') {
@@ -238,7 +238,7 @@ app.post('/api/agendar-slot', async (req, res) => {
                 message: agendamentoResult.control.message,
                 agendamentoId: agendamentoResult.appointment ? agendamentoResult.appointment.id : null,
                 accessToken: accessToken,
-                ambiente: ambienteResolvido // ✅
+                ambiente: ambienteResolvido
             });
         } else {
             res.status(400).json({
@@ -268,13 +268,12 @@ app.post('/api/criar-os', async (req, res) => {
         subscriberId,
         inventoryId,
         enderecoDetalhes,
-        ambiente // ✅
+        ambiente
     } = req.body;
 
     const ambienteResolvido = resolveAmbiente(ambiente);
 
     try {
-        // ✅ repassa ambienteResolvido para criarOrdemServico
         const osResult = await criarOrdemServico(
             cp_selection,
             addressId,
@@ -290,26 +289,26 @@ app.post('/api/criar-os', async (req, res) => {
 
         if (osResult && osResult.order && osResult.order.id) {
             const newOrder = {
-                orderId: osResult.order.id,
-                saId: agendamentoId,
+                orderId:          osResult.order.id,
+                saId:             agendamentoId,
                 correlationOrder: osResult.order.correlationOrder,
                 associatedDocument: osResult.order.associatedDocument,
-                cp: cp_selection,
-                ambiente: ambienteResolvido, // ✅ registra ambiente no bolsão
-                subscriberId: subscriberId,
-                productName: produtoSelecionado.name,
+                cp:               cp_selection,
+                ambiente:         ambienteResolvido,
+                subscriberId:     subscriberId,
+                productName:      produtoSelecionado.name,
                 productCatalogId: produtoSelecionado.catalogId,
                 address: {
-                    streetName: enderecoDetalhes.streetName,
-                    streetNr: enderecoDetalhes.streetNr,
-                    neighborhood: enderecoDetalhes.neighborhood,
-                    locality: enderecoDetalhes.locality,
+                    streetName:      enderecoDetalhes.streetName,
+                    streetNr:        enderecoDetalhes.streetNr,
+                    neighborhood:    enderecoDetalhes.neighborhood,
+                    locality:        enderecoDetalhes.locality,
                     stateOrProvince: enderecoDetalhes.stateOrProvince,
-                    postcode: enderecoDetalhes.postcode,
-                    description: enderecoDetalhes.description
+                    postcode:        enderecoDetalhes.postcode,
+                    description:     enderecoDetalhes.description
                 },
-                complement: complementoSelecionado,
-                slotDate: slotSelecionado.startDate,
+                complement:  complementoSelecionado,
+                slotDate:    slotSelecionado.startDate,
                 creationDate: new Date().toISOString()
             };
             createdOrders.push(newOrder);
@@ -317,12 +316,12 @@ app.post('/api/criar-os', async (req, res) => {
             console.log('[APP] Ordem de Serviço armazenada no Bolsão:', newOrder);
 
             res.json({
-                status: 'sucesso',
-                message: 'Ordem de Serviço criada com sucesso!',
-                orderId: osResult.order.id,
-                saId: agendamentoId,
+                status:             'sucesso',
+                message:            'Ordem de Serviço criada com sucesso!',
+                orderId:            osResult.order.id,
+                saId:               agendamentoId,
                 associatedDocument: osResult.order.associatedDocument,
-                ambiente: ambienteResolvido // ✅
+                ambiente:           ambienteResolvido
             });
         } else {
             console.error('[APP] Resposta inesperada da API de Ordem de Serviço:', osResult);
@@ -339,10 +338,7 @@ app.post('/api/criar-os', async (req, res) => {
 // ─────────────────────────────────────────────
 app.get('/api/ordens-servico', (req, res) => {
     console.log('[APP] Requisição para listar Ordens de Serviço. Total:', createdOrders.length);
-    res.json({
-        status: 'sucesso',
-        orders: createdOrders
-    });
+    res.json({ status: 'sucesso', orders: createdOrders });
 });
 
 // ─────────────────────────────────────────────
@@ -355,8 +351,8 @@ app.post('/api/upload-viabilidade-lote', upload.single('spreadsheet'), async (re
         return res.status(400).json({ status: 'erro', message: 'Nenhum arquivo enviado.' });
     }
 
-    const cp_selection = String(req.body.cp_selection || '').trim();
-    const ambiente = String(req.body.ambiente || 'TRG').trim(); // ✅ recebe ambiente via FormData
+    const cp_selection    = String(req.body.cp_selection || '').trim();
+    const ambiente        = String(req.body.ambiente || 'TRG').trim();
     const ambienteResolvido = resolveAmbiente(ambiente);
 
     if (!cp_selection) {
@@ -369,21 +365,14 @@ app.post('/api/upload-viabilidade-lote', upload.single('spreadsheet'), async (re
     try {
         console.log('[UPLOAD] arquivo:', req.file.originalname, '| cp:', cp_selection, '| ambiente:', ambienteResolvido);
 
-        // ✅ repassa ambienteResolvido para processarPlanilhaViabilidade
-        const result = await processarPlanilhaViabilidade(
-            req.file.path,
-            cp_selection,
-            CLIENTS,
-            ambienteResolvido
-        );
-
+        const result   = await processarPlanilhaViabilidade(req.file.path, cp_selection, CLIENTS, ambienteResolvido);
         const fileName = path.basename(result.resultFilePath || result);
 
         return res.json({
-            status: 'sucesso',
+            status:  'sucesso',
             message: 'Planilha processada com sucesso!',
             fileName,
-            ambiente: ambienteResolvido // ✅
+            ambiente: ambienteResolvido
         });
     } catch (error) {
         console.error('[APP] Erro ao processar planilha de viabilidade em lote:', error);
