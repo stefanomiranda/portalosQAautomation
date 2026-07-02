@@ -8,7 +8,7 @@ const { buscarSlotsDisponiveis, agendarSlot } = require('./core/agendamento');
 const { criarOrdemServico } = require('./core/ordemServico');
 const multer = require('multer');
 const { processarPlanilhaViabilidade } = require('./core/viabilidadeLoteProcessor');
-
+const fetch = require('node-fetch');
 const app = express();
 
 // ✅ OpenShift injeta a porta via process.env.PORT — fallback 8080 para local
