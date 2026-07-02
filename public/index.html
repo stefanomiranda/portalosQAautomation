@@ -158,6 +158,14 @@
                 </div>
             </a>
 
+            <a class="home-option-card" id="linkAPIs" href="apis.html?ambiente=TRG">
+                <div class="card-icon">🔌</div>
+                <div class="card-body">
+                    <h2>APIs de Gerenciamento</h2>
+                    <p>Acesse funcionalidades de bloqueio, desbloqueio e outras operações via API.</p>
+                </div>
+            </a>
+
         </div>
     </div>
 
@@ -184,6 +192,8 @@
             // Atualiza links dos cards com o ambiente selecionado
             document.getElementById('linkCriarOS').href = `createos.html?ambiente=${amb}`;
             document.getElementById('linkLote').href    = `viabilidadelote.html?ambiente=${amb}`;
+            // NOVA LINHA AQUI
+            document.getElementById('linkAPIs').href    = `apis.html?ambiente=${amb}`;
         }
 
         // Inicializa com valor padrão

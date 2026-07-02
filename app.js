@@ -367,6 +367,75 @@ app.get('/api/ordens-servico', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// POST /api/execute-api-action
+// ─────────────────────────────────────────────
+app.post('/api/execute-api-action', async (req, res) => {
+    const { action, payload, cp_selection, ambiente } = req.body;
+    const ambienteResolvido = resolveAmbiente(ambiente);
+
+    if (!action || !payload || !cp_selection || !ambiente) {
+        return res.status(400).json({ status: 'erro', message: 'Dados incompletos para executar a ação da API.' });
+    }
+
+    console.log(`[APP] Recebida requisição para ${action} no ambiente ${ambienteResolvido} para CP ${cp_selection}`);
+    console.log('[APP] Payload recebido:', JSON.stringify(payload, null, 2));
+
+    try {
+        // Primeiro, obter o token de autenticação
+        const tokenData = await getTokenForCp(cp_selection, CLIENTS, ambienteResolvido);
+        if (!tokenData || !tokenData.access_token) {
+            return res.status(401).json({ status: 'erro', message: 'Não foi possível obter o token de autenticação para o CP selecionado.' });
+        }
+        const accessToken = tokenData.access_token;
+
+        // URL da API externa (baseHost)
+        const BASE_HOSTS = {
+            TRG:  'https://apitrg.vtal.com.br',
+            TI:   'https://api-ti1.vtal.com.br',
+            TRG2: 'https://api-ti2.vtal.com.br'
+        };
+        const baseHost = BASE_HOSTS[ambienteResolvido];
+        if (!baseHost) {
+            return res.status(500).json({ status: 'erro', message: `Ambiente ${ambienteResolvido} não configurado para API externa.` });
+        }
+
+        const apiUrl = `${baseHost}/api/productOrdering/v2/productOrder`;
+
+        console.log(`[APP] Enviando requisição para API externa: ${apiUrl}`);
+        const apiResponse = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const apiResponseData = await apiResponse.json();
+
+        if (apiResponse.ok) {
+            console.log(`[APP] Resposta da API externa para ${action}:`, JSON.stringify(apiResponseData, null, 2));
+            res.json({
+                status: 'sucesso',
+                message: `Operação de ${action} concluída com sucesso.`,
+                apiResponse: apiResponseData
+            });
+        } else {
+            console.error(`[APP] Erro da API externa para ${action} (Status: ${apiResponse.status}):`, JSON.stringify(apiResponseData, null, 2));
+            res.status(apiResponse.status).json({
+                status: 'erro',
+                message: `A API externa retornou um erro para ${action}: ${apiResponseData.message || apiResponseData.error || 'Erro desconhecido.'}`,
+                apiResponse: apiResponseData
+            });
+        }
+
+    } catch (error) {
+        console.error(`[APP] Erro no backend ao executar ${action}:`, error);
+        res.status(500).json({ status: 'erro', message: `Erro interno do servidor ao executar ${action}: ${error.message}` });
+    }
+});
+
+// ─────────────────────────────────────────────
 // POST /api/upload-viabilidade-lote
 // ─────────────────────────────────────────────
 const upload = multer({ dest: 'uploads/' });
