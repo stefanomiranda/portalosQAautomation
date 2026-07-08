@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal - Criar OS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container">
+
+    <a href="index.html" class="back-home">&larr; Voltar ao Início</a>
+
+    <h1>📋 Criar Ordem de Serviço</h1>
+
+    <div style="text-align:center;">
+        <span class="env-badge TRG" id="envBadge">
+            <span class="env-dot"></span>
+            <span id="envBadgeText">TRG</span>
+        </span>
+    </div>
+
+    <div class="step-indicator" id="stepIndicator">
+        <div class="step active" id="step1"><div class="step-circle">1</div><div class="step-label">Endereço</div></div>
+        <div class="step-line"   id="line1"></div>
+        <div class="step"        id="step2"><div class="step-circle">2</div><div class="step-label">Complemento</div></div>
+        <div class="step-line"   id="line2"></div>
+        <div class="step"        id="step3"><div class="step-circle">3</div><div class="step-label">Produto</div></div>
+        <div class="step-line"   id="line3"></div>
+        <div class="step"        id="step4"><div class="step-circle">4</div><div class="step-label">Slot</div></div>
+        <div class="step-line"   id="line4"></div>
+        <div class="step"        id="step5"><div class="step-circle">5</div><div class="step-label">Confirmação</div></div>
+    </div>
+
+    <div id="globalMessage" class="message hidden"></div>
+
+    <div class="section" id="addressConsultation">
+        <h2>1. Consultar Endereço</h2>
+        <label for="cpSelect">CP (Cliente Parceiro):</label>
+        <select id="cpSelect">
+            <option value="">Carregando CPs...</option>
+        </select>
+
+        <label for="cepInput">CEP:</label>
+        <input type="text" id="cepInput" placeholder="Ex: 01310-100" maxlength="9">
+
+        <label for="numeroInput">Número da Fachada:</label>
+        <input type="text" id="numeroInput" placeholder="Ex: 123">
+
+        <button onclick="consultarEndereco()" id="consultarBtn">🔍 Consultar Endereço</button>
+    </div>
+
+    <div class="section hidden" id="complementSelection">
+        <h2>2. Escolha o Complemento</h2>
+        <p><strong>Endereço:</strong> <span id="enderecoDisplay"></span></p>
+        <div id="complementList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('addressConsultation', 1)">&larr; Voltar</button>
+            <button onclick="confirmarComplemento()" id="confirmComplementBtn" disabled>Confirmar Complemento &rarr;</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="productSelection">
+        <h2>3. Escolha o Produto</h2>
+        <div id="productList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('complementSelection', 2)">&larr; Voltar</button>
+            <button onclick="confirmarProduto()" id="confirmProductBtn" disabled>Confirmar Produto &rarr;</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="slotSelection">
+        <h2>4. Escolha o Slot de Instalação</h2>
+        <div id="slotList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('productSelection', 3)">&larr; Voltar</button>
+            <button onclick="confirmarSlot()" id="confirmSlotBtn" disabled>Confirmar Slot &rarr;</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="orderConfirmation">
+        <h2>5. Confirmação da Ordem de Serviço</h2>
+        <div id="orderConfirmation">
+            <p><strong>Ambiente:</strong> <span id="confirmAmbiente"></span></p>
+            <p><strong>Endereço:</strong> <span id="confirmAddress"></span></p>
+            <p><strong>Complemento:</strong> <span id="confirmComplement"></span></p>
+            <p><strong>Produto Selecionado:</strong> <span id="confirmProduct"></span></p>
+            <p><strong>Slot de Agendamento:</strong> <span id="confirmSlot"></span></p>
+            <hr>
+            <p><strong>ID da Ordem de Serviço:</strong> <span id="finalOrderId" style="color:#28a745; font-weight:700;"></span></p>
+            <p><strong>ID do Agendamento (SA):</strong> <span id="finalSaId"></span></p>
+            <p><strong>Documento Associado:</strong> <span id="finalAssociatedDocument"></span></p>
+        </div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('slotSelection', 4)">&larr; Voltar</button>
+            <button onclick="criarOrdemDeServico()" id="createOrderBtn">✅ Criar Ordem de Serviço</button>
+            <button onclick="resetFlow()">🔄 Nova Consulta</button>
+        </div>
+    </div>
+
+</div>
+<script src="js/main.js"></script>
+</body>
+</html>

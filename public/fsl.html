@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalação via FSL — PortalNode</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ============================================================
+           FSL — Complementos visuais sobre style.css
+           (Identidade V.tal: amarelo #FFD700 + tipografia Segoe UI)
+           ============================================================ */
+
+        .fsl-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--vtal-yellow);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .fsl-page-header .fsl-title {
+            margin: 0; padding: 0; border: none; text-align: left;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 1.7em;
+        }
+        .fsl-page-header .back-link {
+            color: var(--vtal-gray-dark);
+            text-decoration: none;
+            font-size: 0.88em;
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--vtal-white);
+        }
+        .fsl-page-header .back-link:hover {
+            background: #f8f9fa;
+            border-color: var(--vtal-gray-dark);
+            text-decoration: none;
+        }
+        #ambiente-badge {
+            background: #f8f9fa;
+            color: var(--vtal-gray-dark);
+            border: 1.5px solid var(--vtal-gray-medium);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .fsl-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* ---- Bolsão ---- */
+        .fsl-bolsao-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            gap: 10px;
+        }
+        .fsl-bolsao-count {
+            font-size: 0.85em;
+            color: var(--vtal-gray-dark);
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .fsl-bolsao-refresh {
+            background: var(--vtal-white) !important;
+            color: var(--vtal-gray-dark) !important;
+            border: 1px solid var(--vtal-gray-medium) !important;
+            padding: 6px 14px !important;
+            border-radius: 6px !important;
+            font-size: 0.82em !important;
+            font-weight: 600 !important;
+            cursor: pointer;
+            transition: all 0.15s !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            font-family: inherit;
+        }
+        .fsl-bolsao-refresh:hover {
+            background: var(--vtal-yellow) !important;
+            border-color: var(--vtal-yellow) !important;
+            color: var(--vtal-black) !important;
+            transform: none !important;
+        }
+        .fsl-bolsao-list {
+            max-height: 340px;
+            overflow-y: auto;
+            border: 1px solid var(--vtal-gray-medium);
+            border-radius: 8px;
+            background: #fff;
+        }
+        .fsl-bolsao-item {
+            padding: 12px 14px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .fsl-bolsao-item:hover {
+            background: #fffbe6;
+            border-left: 3px solid var(--vtal-yellow);
+            padding-left: 11px;
+        }
+        .fsl-bolsao-item:last-child { border-bottom: 0; }
+        .fsl-bolsao-item .sa {
+            font-weight: 700;
+            color: var(--vtal-black);
+            font-size: 1.02em;
+            min-width: 90px;
+        }
+        .fsl-bolsao-item .meta {
+            font-size: 0.8em;
+            color: #666;
+            flex: 1;
+            line-height: 1.4;
+        }
+        .fsl-bolsao-empty {
+            padding: 30px 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px dashed #ced4da;
+        }
+
+        /* ---- Form (custom sobre style.css) ---- */
+        .fsl-form-row { margin-bottom: 18px; }
+        .fsl-form-row > label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--vtal-black);
+            font-size: 0.9em;
+        }
+        .fsl-form-row input,
+        .fsl-form-row select { margin-bottom: 0; }
+        .fsl-form-row .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            cursor: pointer;
+        }
+        .fsl-form-row .checkbox-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: var(--vtal-yellow);
+        }
+        .fsl-form-row .checkbox-row label {
+            margin: 0;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* ---- Botões ---- */
+        .fsl-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        #btnCancelar.fsl-btn-secondary,
+        .fsl-btn-secondary {
+            background: var(--vtal-white) !important;
+            color: var(--vtal-gray-dark) !important;
+            border: 1px solid var(--vtal-gray-medium) !important;
+            box-shadow: none !important;
+        }
+        #btnCancelar.fsl-btn-secondary:hover,
+        .fsl-btn-secondary:hover {
+            background: #f8d7da !important;
+            border-color: var(--error-color) !important;
+            color: var(--error-color) !important;
+            transform: none !important;
+        }
+
+        /* ---- Log ---- */
+        .fsl-log {
+            background: #1a1d20;
+            color: #d1d5db;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.82em;
+            max-height: 440px;
+            overflow-y: auto;
+            line-height: 1.55;
+            border: 1px solid #2d3135;
+        }
+        .fsl-log::-webkit-scrollbar { width: 8px; }
+        .fsl-log::-webkit-scrollbar-track { background: #1a1d20; }
+        .fsl-log::-webkit-scrollbar-thumb {
+            background: #495057; border-radius: 4px;
+        }
+        .fsl-log .log-line {
+            padding: 4px 10px;
+            border-left: 2px solid transparent;
+            margin: 1px 0;
+            border-radius: 3px;
+        }
+        .fsl-log .log-ok {
+            color: #51cf66;
+            border-left-color: #51cf66;
+            background: rgba(81, 207, 102, 0.05);
+        }
+        .fsl-log .log-warn {
+            color: #ffd43b;
+            border-left-color: #ffd43b;
+            background: rgba(255, 212, 59, 0.05);
+        }
+        .fsl-log .log-err {
+            color: #ff6b6b;
+            border-left-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.05);
+        }
+
+        /* ---- Token box (destaque) ---- */
+        .fsl-token-box {
+            background: linear-gradient(135deg, #fff8e1 0%, #fffbe6 100%);
+            border: 1.5px solid var(--vtal-yellow);
+            border-left: 5px solid var(--vtal-yellow);
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-top: 16px;
+            font-size: 0.9em;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.12);
+        }
+        .fsl-token-box .token-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            color: #7a6000;
+            font-size: 1.05em;
+            margin-bottom: 10px;
+        }
+        .fsl-token-box p {
+            margin: 6px 0;
+            color: #5c4a00;
+        }
+        .fsl-token-box code {
+            background: var(--vtal-white);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-weight: 600;
+            color: #5c4a00;
+            border: 1px solid #e6c200;
+        }
+        .fsl-token-box .token-input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .fsl-token-box .token-input-row input {
+            flex: 1;
+            padding: 10px;
+            border: 1.5px solid #e6c200;
+            border-radius: 6px;
+            font-size: 1em;
+            letter-spacing: 3px;
+            text-align: center;
+            font-weight: 700;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: var(--vtal-white);
+            margin: 0;
+        }
+        .fsl-token-box .token-input-row input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3);
+        }
+        .fsl-token-box .token-input-row button {
+            padding: 10px 20px;
+            background: var(--vtal-yellow) !important;
+            color: var(--vtal-black) !important;
+            border: 0 !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            font-weight: 700 !important;
+            font-family: inherit;
+            margin: 0 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+        }
+        .fsl-token-box .token-input-row button:hover {
+            background: var(--vtal-yellow-dark) !important;
+        }
+        .fsl-token-box .token-hint {
+            font-size: 0.78em;
+            color: #8a6d00;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* ---- Resultado ---- */
+        .fsl-result { margin-top: 16px; padding: 16px; border-radius: 8px; }
+        .fsl-result.ok {
+            background: #d4edda;
+            color: #155724;
+            border: 1.5px solid #28a745;
+            border-left: 5px solid #28a745;
+        }
+        .fsl-result.err {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1.5px solid #dc3545;
+            border-left: 5px solid #dc3545;
+        }
+        .fsl-result strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.05em;
+        }
+        .fsl-result pre {
+            background: rgba(0,0,0,0.06);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.82em;
+            line-height: 1.4;
+            border: 1px solid rgba(0,0,0,0.08);
+            margin: 0;
+        }
+
+        /* ---- Responsivo ---- */
+        @media (max-width: 900px) {
+            .fsl-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .fsl-page-header { flex-direction: column; align-items: flex-start; }
+            .fsl-page-header .fsl-title { font-size: 1.3em; }
+            .fsl-bolsao-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .fsl-bolsao-item .sa { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="fsl-page-header">
+            <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;">
+                <a href="apis.html" class="back-link">← APIs</a>
+                <h1 class="fsl-title">🛠️ Instalação via FSL</h1>
+            </div>
+            <span id="ambiente-badge">—</span>
+        </header>
+
+        <div class="fsl-grid">
+            <!-- COLUNA 1: BOLSAO + FORMULARIO -->
+            <div>
+                <section class="section">
+                    <h2 style="font-size:1.2em;text-align:left;margin-bottom:15px;border:none;padding-bottom:0;">📥 Importar do Bolsão</h2>
+                    <div class="fsl-bolsao-toolbar">
+                        <span id="bolsao-count" class="fsl-bolsao-count">— OSs</span>
+                        <button class="fsl-bolsao-refresh" onclick="carregarBolsao()">↻ Atualizar</button>
+                    </div>
+                    <div id="bolsao-container">
+                        <div class="fsl-bolsao-empty">Carregando lista do bolsão…</div>
+                    </div>
+                </section>
+
+                <section class="section" style="margin-top:20px;">
+                    <h2 style="font-size:1.2em;text-align:left;margin-bottom:15px;border:none;padding-bottom:0;">⚙️ Parâmetros da Instalação</h2>
+
+                    <div class="fsl-form-row">
+                        <label for="sa">SA</label>
+                        <input type="text" id="sa" placeholder="Ex: 913718">
+                    </div>
+
+                    <div class="fsl-form-row">
+                        <label for="ambiente">Ambiente</label>
+                        <select id="ambiente">
+                            <option value="TRG">TRG</option>
+                            <option value="TRG2">TRG2</option>
+                            <option value="TI">TI</option>
+                        </select>
+                    </div>
+
+                    <div class="fsl-form-row">
+                        <label for="fslUrl">URL do FSL</label>
+                        <input type="text" id="fslUrl" value="https://oimoveltrialorg2021--trg.sandbox.my.salesforce.com/">
+                    </div>
+
+                    <div class="fsl-form-row">
+                        <label for="fslUser">Usuário FSL</label>
+                        <input type="text" id="fslUser" placeholder="email@vtal.com">
+                    </div>
+
+                    <div class="fsl-form-row">
+                        <label for="fslPass">Senha FSL</label>
+                        <input type="password" id="fslPass" placeholder="********">
+                    </div>
+
+                    <div class="fsl-form-row">
+                        <div class="checkbox-row" onclick="document.getElementById('dryRun').click()">
+                            <input type="checkbox" id="dryRun">
+                            <label for="dryRun">Dry-run (somente login + 2FA)</label>
+                        </div>
+                    </div>
+
+                    <div class="fsl-actions">
+                        <button id="btnInstalar" onclick="iniciarInstalacao()">▶ Iniciar Instalação</button>
+                        <button id="btnCancelar" class="fsl-btn-secondary" style="display:none;" onclick="cancelarExecucao()">Cancelar</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- COLUNA 2: LOG + TOKEN + RESULTADO -->
+            <div>
+                <section class="section">
+                    <h2 style="font-size:1.2em;text-align:left;margin-bottom:15px;border:none;padding-bottom:0;">📋 Log de Execução</h2>
+                    <div id="log" class="fsl-log">
+                        <div class="log-line">Aguardando início…</div>
+                    </div>
+                </section>
+
+                <div id="token-box" class="fsl-token-box" style="display:none;">
+                    <div class="token-title">⏳ Aguardando código 2FA</div>
+                    <p>Se você tem a regra do Outlook configurada, ela vai disparar sozinha. Senão, cole o código do email aqui:</p>
+                    <p>Token ativo: <code id="token-valor">—</code></p>
+                    <div class="token-input-row">
+                        <input type="text" id="codigo-manual" maxlength="8" placeholder="Código de 6 dígitos">
+                        <button type="button" id="btn-codigo-manual" onclick="enviarCodigoManual()">Enviar</button>
+                    </div>
+                    <p class="token-hint">💡 Dica: clique no input e cole direto (Ctrl+V) — funciona automático também.</p>
+                </div>
+
+                <div id="result" class="fsl-result" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/fsl.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal - Bolsão de OS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container">
+
+    <a href="index.html" class="back-home">&larr; Voltar ao Início</a>
+
+    <h1>📦 Bolsão de OS</h1>
+
+    <div class="section" id="osListSection">
+
+        <div class="orders-header">
+            <h2 style="margin:0; border:none; padding:0; font-size:1.2em;">
+                Ordens de Serviço Criadas
+            </h2>
+            <span class="orders-count" id="ordersCount">Carregando...</span>
+        </div>
+
+        <div class="filter-bar">
+            <label for="filtroAmbiente">🌐 Ambiente:</label>
+            <select id="filtroAmbiente">
+                <option value="TODOS">Todos</option>
+                <option value="TRG">🟡 TRG</option>
+                <option value="TI">🟢 TI</option>
+                <option value="TRG2">🔵 TRG2</option>
+            </select>
+
+            <label for="filtroStatus" style="margin-left:10px;">📋 Status:</label>
+            <select id="filtroStatus">
+                <option value="TODOS">Todas</option>
+                <option value="ATIVAS">Somente Ativas</option>
+                <option value="VENCIDAS">Somente Vencidas</option>
+            </select>
+
+            <button class="btn-expurgo" id="btnExpurgo" title="Remove do bolsão as OS com agendamento vencido">
+                🗑️ Expurgar Vencidas
+            </button>
+        </div>
+
+        <div class="message hidden" id="bolsaoMessage"></div>
+        <div id="osListContainer">
+            <p class="info">Carregando Ordens de Serviço...</p>
+        </div>
+    </div>
+
+</div>
+<script src="js/bolsaoOs.js"></script>
+</body>
+</html>

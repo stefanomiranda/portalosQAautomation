@@ -1,0 +1,125 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mudança de Endereço - PortalNode</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="container">
+
+    <a href="index.html" id="homeBtn" class="back-home">&larr; Voltar ao Início</a>
+
+    <h1>🏠 Mudança de Endereço</h1>
+
+    <div style="text-align:center;">
+        <span class="env-badge TRG" id="envBadge">
+            <span class="env-dot"></span>
+            <span id="envBadgeText">TRG</span>
+        </span>
+    </div>
+
+    <div class="step-indicator" id="stepIndicator">
+        <div class="step active" id="step1"><div class="step-circle">1</div><div class="step-label">Dados Iniciais</div></div>
+        <div class="step-line"   id="line1"></div>
+        <div class="step"        id="step2"><div class="step-circle">2</div><div class="step-label">Complemento</div></div>
+        <div class="step-line"   id="line2"></div>
+        <div class="step"        id="step3"><div class="step-circle">3</div><div class="step-label">Produto</div></div>
+        <div class="step-line"   id="line3"></div>
+        <div class="step"        id="step4"><div class="step-circle">4</div><div class="step-label">Slot</div></div>
+        <div class="step-line"   id="line4"></div>
+        <div class="step"        id="step5"><div class="step-circle">5</div><div class="step-label">Criar OS</div></div>
+    </div>
+
+    <div id="statusMessage" class="message info hidden"></div>
+
+    <div class="section" id="dadosIniciaisSection">
+        <h2>1) Dados Iniciais e Endereço de Destino</h2>
+
+        <label for="cpSelect">CP (Cliente Parceiro):</label>
+        <select id="cpSelect">
+            <option value="">Selecione um CP</option>
+        </select>
+
+        <label for="bolsaoOsSelect">📥 OS do Bolsão (opcional)</label>
+        <select id="bolsaoOsSelect">
+            <option value="">Carregando OSs do bolsão...</option>
+        </select>
+        <span style="display:block;margin-top:-8px;margin-bottom:14px;font-size:0.8em;color:#6b7280;font-style:italic;">
+            Selecione uma OS criada pelo PortalNode — o SubscriberId Antigo é preenchido automaticamente.
+            Deixe vazio para informar o SubscriberId manualmente.
+        </span>
+
+        <label for="oldSubscriberId">SubscriberId Antigo (Origem)</label>
+        <input id="oldSubscriberId" type="text" placeholder="Ex.: TDMQAOSS12345678" />
+
+        <label for="cepInput">CEP Destino</label>
+        <input id="cepInput" type="text" placeholder="Ex.: 01001000" />
+
+        <label for="numeroInput">Número Destino</label>
+        <input id="numeroInput" type="text" placeholder="Ex.: 100" />
+
+        <button id="consultarEnderecoBtn">🔍 Consultar Endereço</button>
+
+        <div id="enderecoInfo" class="message info hidden"></div>
+        <div id="newSubscriberInfo" class="message info hidden"></div>
+    </div>
+
+    <div class="section hidden" id="complementoSection">
+        <h2>2) Escolher Complemento</h2>
+        <div id="complementosList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('dadosIniciaisSection', 1)">&larr; Voltar</button>
+            <button id="verificarDisponibilidadeBtn">Verificar Disponibilidade &rarr;</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="produtoSection">
+        <h2>3) Escolher Produto</h2>
+        <div id="produtosList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('complementoSection', 2)">&larr; Voltar</button>
+            <button id="buscarSlotsBtn" disabled>Buscar Slots (Mudança Endereço) &rarr;</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="slotSection">
+        <h2>4) Escolher Slot</h2>
+        <div id="slotsList"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('produtoSection', 3)">&larr; Voltar</button>
+            <button id="agendarSlotBtn" disabled>Agendar Slot &rarr;</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="osSection">
+        <h2>5) Criar OS de Mudança de Endereço</h2>
+        <div id="confirmacaoOs" class="message success hidden"></div>
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('slotSection', 4)">&larr; Voltar</button>
+            <button id="criarOsBtn" disabled>✅ Criar OS de Mudança de Endereço</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="retiradaSection" style="border-left: 5px solid var(--vtal-yellow);">
+        <h2>6) Criar OS de Retirada (sistêmica)</h2>
+        <p style="color: var(--vtal-gray-dark); font-size: 0.9em;">
+            A retirada é criada automaticamente a partir do <strong>SubscriberId Antigo</strong>
+            informado na etapa 1 — opcionalmente o usuário pode ter selecionado uma OS do bolsão.
+            A Retirada é sistêmica — sem agendamento, sem mudança de endereço — apenas remove o produto
+            do endereço antigo.
+        </p>
+        <div id="confirmacaoRetirada" class="message success hidden" style="margin-top:12px;"></div>
+        <div style="margin-top:15px;">
+            <button id="criarRetiradaBtn">✅ Criar OS de Retirada</button>
+        </div>
+    </div>
+
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/mudancaEndereco.js"></script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chamado Tecnico - PortalNode</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .countdown-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            font-weight: 700;
+            background: var(--success-color);
+            color: #fff;
+        }
+        .countdown-badge.warn    { background: var(--warn-color); }
+        .countdown-badge.expired { background: var(--error-color); }
+
+        .checkpoint-panel {
+            background: #fff8e1;
+            border: 2px solid var(--vtal-yellow);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .checkpoint-panel h3 { color: #7a6000; margin-top: 0; }
+        .checkpoint-panel ol { padding-left: 20px; }
+        .checkpoint-panel li { margin-bottom: 8px; color: var(--vtal-black); }
+
+        .diag-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .diag-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .diag-card.expired { opacity: 0.6; border-left: 4px solid var(--error-color); }
+        .diag-card.valido  { border-left: 4px solid var(--success-color); }
+
+        .badge-ok    { display:inline-block;background:var(--success-color);color:#fff;padding:2px 8px;border-radius:10px;font-size:0.72em;font-weight:700; }
+        .badge-nok   { display:inline-block;background:var(--error-color);  color:#fff;padding:2px 8px;border-radius:10px;font-size:0.72em;font-weight:700; }
+        .badge-warn  { display:inline-block;background:var(--warn-color);   color:#fff;padding:2px 8px;border-radius:10px;font-size:0.72em;font-weight:700; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <a href="index.html" class="back-home">&larr; Voltar ao Início</a>
+
+    <h1>🎫 Chamado Tecnico (Trouble Ticket)</h1>
+
+    <div style="text-align:center;">
+        <span class="env-badge TRG" id="envBadge">
+            <span class="env-dot"></span>
+            <span id="envBadgeText">TRG</span>
+        </span>
+    </div>
+
+    <div class="step-indicator">
+        <div class="step active" id="step1"><div class="step-circle">1</div><div class="step-label">Cliente</div></div>
+        <div class="step-line"   id="line1"></div>
+        <div class="step"        id="step2"><div class="step-circle">2</div><div class="step-label">Slot</div></div>
+        <div class="step-line"   id="line2"></div>
+        <div class="step"        id="step3"><div class="step-circle">3</div><div class="step-label">Abrir TT</div></div>
+        <div class="step-line"   id="line3"></div>
+        <div class="step"        id="step4"><div class="step-circle">4</div><div class="step-label">Checkpoint 1</div></div>
+        <div class="step-line"   id="line4"></div>
+        <div class="step"        id="step5"><div class="step-circle">5</div><div class="step-label">Checkpoint 2</div></div>
+    </div>
+
+    <div id="statusMessage" class="message info hidden"></div>
+
+    <div class="section" id="clienteSection">
+        <h2>1) Identificacao do Cliente (via Diagnostico)</h2>
+
+        <p style="font-size:0.9em; color:#666;">
+            O chamado tecnico exige um diagnostico com retorno <strong>NOK</strong> de ate 15 minutos atras.
+        </p>
+
+        <label for="diagnosticoSelector">Selecione um Diagnostico:</label>
+        <select id="diagnosticoSelector">
+            <option value="">Carregando diagnosticos...</option>
+        </select>
+
+        <div id="diagnosticoSelecionadoInfo" class="hidden" style="margin-top:15px;padding:15px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;">
+            <p><strong>Subscriber:</strong> <span id="diagSubscriber"></span></p>
+            <p><strong>GPON:</strong> <span id="diagGpon"></span></p>
+            <p><strong>Resultado:</strong> <span id="diagResultado"></span></p>
+            <p><strong>Expira em:</strong> <span id="diagExpira" class="countdown-badge"></span></p>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button id="avancarSlotBtn" disabled>&rarr; Avancar para Slot</button>
+        </div>
+
+        <hr style="margin:25px 0;">
+
+        <h3>Diagnosticos disponiveis</h3>
+        <div id="diagnosticosList">Carregando...</div>
+    </div>
+
+    <div class="section hidden" id="slotSection">
+        <h2>2) Buscar e Agendar Slot</h2>
+
+        <label for="addressIdInput">Address ID:</label>
+        <input type="number" id="addressIdInput" placeholder="Ex: 246807">
+
+        <label for="inventoryIdInput">Inventory ID:</label>
+        <input type="number" id="inventoryIdInput" placeholder="Ex: 24787941">
+
+        <div style="margin-top:15px;">
+            <button id="buscarSlotsBtn">🔍 Buscar Slots</button>
+        </div>
+
+        <div id="slotsList" style="margin-top:20px;"></div>
+
+        <div id="agendamentoConfirmado" class="hidden" style="margin-top:20px; padding:15px; background:#d4edda; border:1px solid #c3e6cb; border-radius:8px;">
+            <p><strong>✅ Slot agendado!</strong></p>
+            <p><strong>SA ID:</strong> <span id="agendamentoId"></span></p>
+            <p><strong>Data:</strong> <span id="agendamentoData"></span></p>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button onclick="voltarPara('clienteSection', 1)">&larr; Voltar</button>
+            <button id="avancarAbrirTtBtn" disabled>&rarr; Avancar para Abrir TT</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="abrirTtSection">
+        <h2>3) Abrir Trouble Ticket</h2>
+
+        <label for="ttExternalId">External ID:</label>
+        <input type="text" id="ttExternalId" placeholder="Ex: TT_Teste2503">
+
+        <label for="ttPayload">Payload completo (TT):</label>
+        <textarea id="ttPayload" rows="6" placeholder='{"externalId":"...","affectedCustomer":{...},"description":"..."}'></textarea>
+
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('slotSection', 2)">&larr; Voltar</button>
+            <button id="abrirTtBtn">🎫 Abrir Trouble Ticket</button>
+        </div>
+
+        <div id="abrirTtResultado" class="hidden" style="margin-top:20px; padding:15px; background:#d4edda; border:1px solid #c3e6cb; border-radius:8px;">
+            <p><strong>TT Externo ID:</strong> <span id="ttExternoId"></span></p>
+            <p><strong>Protocolo:</strong> <span id="ttProtocolo"></span></p>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button id="avancarCheckpoint1Btn" disabled>&rarr; Checkpoint 1 (T088 no SOM)</button>
+        </div>
+    </div>
+
+    <div class="section hidden" id="checkpoint1Section">
+        <h2>4) 🛑 Checkpoint 1 - T088 no SOM</h2>
+
+        <div class="checkpoint-panel">
+            <h3>📋 Tratamento manual da T088 (Planta Externa)</h3>
+            <ol>
+                <li>Acesse o <strong>SOM</strong> (Service Order Management).</li>
+                <li>Localize a T088 do TT Externo ID <code id="cp1TtId"></code>.</li>
+                <li>Selecione o tipo de encerramento:
+                    <ul>
+                        <li><strong>Pendencia</strong> (cliente ausente) &rarr; codigo <code>8010</code> (Cliente Ausente), motivo "Cliente ausente no momento da visita".</li>
+                        <li><strong>Sucesso</strong> (visita resolvida) &rarr; codigo <code>121A1</code> (ONT Fonte de Alimentacao Substituida), informar matricula do tecnico, encerramento externo.</li>
+                    </ul>
+                </li>
+                <li>Clique em <strong>Update</strong>.</li>
+                <li>Se escolheu Pendencia, aguarde a Tenant reagendar (voce sera notificado).</li>
+            </ol>
+        </div>
+
+        <div style="margin-top:15px;">
+            <button onclick="voltarPara('abrirTtSection', 3)">&larr; Voltar</button>
+            <button id="checkpoint1ConcluidoBtn">✅ Ja executei a T088 - continuar</button>
+        </div>
+
+        <div id="checkpoint1Escolha" class="hidden" style="margin-top:15px;">
+            <label for="ttResultadoTipo">Resultado da T088:</label>
+            <select id="ttResultadoTipo">
+                <option value="pendencia">Pendencia (codigo 8010 - Cliente Ausente)</option>
+                <option value="sucesso">Sucesso (codigo 121A1 - ONT Substituida)</option>
+            </select>
+            <div style="margin-top:15px;">
+                <button id="avancarCheckpoint2Btn">&rarr; Checkpoint 2</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="section hidden" id="checkpoint2Section">
+        <h2>5) 🛑 Checkpoint 2 - Patch TT V2 + T088 final</h2>
+
+        <div id="patchNecessario" class="hidden">
+            <div class="checkpoint-panel">
+                <h3>📋 Patch TT V2 (apos Tenant reagendar)</h3>
+                <ol>
+                    <li>A Tenant reagendou a visita - voce recebera o novo <strong>SA ID</strong>.</li>
+                    <li>Copie o <strong>SA ID</strong> do novo agendamento da UI do SOM.</li>
+                    <li>Cole o ID no campo <strong>Appointment ID</strong> abaixo.</li>
+                </ol>
+            </div>
+
+            <label for="patchAppointmentId">Appointment ID (SA reagendado):</label>
+            <input type="text" id="patchAppointmentId" placeholder="Ex: SA-824828">
+
+            <div style="margin-top:15px;">
+                <button id="aplicarPatchBtn">🔧 Aplicar Patch TT V2</button>
+            </div>
+        </div>
+
+        <div id="t088FinalPanel" class="hidden">
+            <div class="checkpoint-panel">
+                <h3>📋 T088 final (encerre como Sucesso)</h3>
+                <ol>
+                    <li>Acesse o SOM novamente.</li>
+                    <li>Localize a T088 do mesmo TT Externo ID.</li>
+                    <li>Selecione <strong>Sucesso</strong> &rarr; codigo <code>121A1</code>, encerramento externo.</li>
+                    <li>Clique em <strong>Update</strong>.</li>
+                </ol>
+            </div>
+
+            <div style="margin-top:15px;">
+                <button id="encerrarT088FinalBtn">✅ T088 encerrada como Sucesso</button>
+            </div>
+        </div>
+
+        <div id="notificacoesList" class="hidden" style="margin-top:20px;">
+            <h3>📨 Notificacoes</h3>
+            <div id="notificacoesContent">Carregando...</div>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button onclick="voltarPara('checkpoint1Section', 4)">&larr; Voltar</button>
+            <a href="diagnostico.html" class="back-home" style="margin-left:10px;">🔬 Voltar ao Diagnostico</a>
+        </div>
+    </div>
+
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/chamadoTecnico.js"></script>
+</body>
+</html>

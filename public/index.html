@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .env-banner {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95em;
+            margin-bottom: 25px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .env-banner.TRG  { display: flex; background: #fff8e1; border-color: #FFD700; color: #7a6000; }
+        .env-banner.TI   { display: flex; background: #e8f5e9; border-color: #28a745; color: #1a5c2a; }
+        .env-banner.TRG2 { display: flex; background: #e3f2fd; border-color: #1976d2; color: #0d3c6e; }
+
+        .env-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .TRG  .env-dot { background: #FFD700; }
+        .TI   .env-dot { background: #28a745; }
+        .TRG2 .env-dot { background: #1976d2; }
+
+        .env-selector-wrapper {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px 25px;
+            margin-bottom: 30px;
+        }
+        .env-selector-wrapper label {
+            font-size: 1em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .env-selector-wrapper select {
+            font-size: 1em;
+            margin-bottom: 0;
+        }
+        .env-description {
+            margin-top: 10px;
+            font-size: 0.88em;
+            color: #666;
+            min-height: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .home-options {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 10px;
+        }
+
+        .home-option-card {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            background: #fff;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 22px 25px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .home-option-card:hover {
+            border-color: #FFD700;
+            box-shadow: 0 6px 20px rgba(255,215,0,0.18);
+            transform: translateY(-2px);
+        }
+        .home-option-card .card-icon {
+            font-size: 2em;
+            min-width: 48px;
+            text-align: center;
+        }
+        .home-option-card .card-body h2 {
+            margin: 0 0 5px 0;
+            font-size: 1.1em;
+            border: none;
+            padding: 0;
+            text-align: left;
+            color: #212529;
+        }
+        .home-option-card .card-body p {
+            margin: 0;
+            font-size: 0.88em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Logo / Título -->
+        <div style="text-align:center; margin-bottom: 25px;">
+            <h1 style="border-bottom: 3px solid #FFD700; padding-bottom: 15px;">🌐 Portal de Automações QA V.tal</h1>
+        </div>
+
+        <!-- Seletor de Ambiente -->
+        <div class="env-selector-wrapper">
+            <label for="ambienteSelect">🔧 Ambiente de Teste</label>
+            <select id="ambienteSelect" onchange="onAmbienteChange()">
+                <option value="TRG">TRG — Ambiente de Teste de Regressão + Tenants </option>
+                <option value="TI">TI — Ambiente de Testes Integrados</option>
+                <option value="TRG2">TRG2 — Ambiente de Testes de Regressão</option>
+            </select>
+            <div class="env-description" id="envDescription">
+                🟡 Conectado ao ambiente principal de homologação.
+            </div>
+        </div>
+
+        <!-- Banner de ambiente ativo -->
+        <div class="env-banner TRG" id="envBanner">
+            <span class="env-dot"></span>
+            <span id="envBannerText">Ambiente ativo: <strong>TRG</strong> — https://apitrg.vtal.com.br</span>
+        </div>
+
+        <!-- Cards de navegação -->
+        <div class="home-options">
+
+            <a class="home-option-card" id="linkCriarOS" href="createos.html?ambiente=TRG">
+                <div class="card-icon">📋</div>
+                <div class="card-body">
+                    <h2>Criar Ordem de Serviço</h2>
+                    <p>Inicia o fluxo completo para a criação de uma nova Ordem de Serviço.</p>
+                </div>
+            </a>
+            
+            <a class="home-option-card" id="linkFsl" href="fsl.html">
+                <div class="card-icon">📶</div>
+                <div class="card-body">
+                    <h2>Instalar via FSL</h2>
+                    <p>Executa o fluxo automatizado de instalação de OS no FSL.</p>
+                </div>
+            </a>           
+
+            <a class="home-option-card" id="linkBolsao" href="bolsaoos.html">
+                <div class="card-icon">📦</div>
+                <div class="card-body">
+                    <h2>Bolsão de OS</h2>
+                    <p>Visualize e gerencie as Ordens de Serviço já criadas.</p>
+                </div>
+            </a>
+
+            <a class="home-option-card" id="linkLote" href="viabilidadelote.html?ambiente=TRG">
+                <div class="card-icon">📊</div>
+                <div class="card-body">
+                    <h2>Viabilidade em Lote</h2>
+                    <p>Faça consultas de viabilidade massiva através de planilhas Excel.</p>
+                </div>
+            </a>
+
+            <a class="home-option-card" id="linkAPIs" href="apis.html?ambiente=TRG">
+                <div class="card-icon">💨🔍</div>
+                <div class="card-body">
+                    <h2>Automação de Smoke Test</h2>
+                    <p>Acesse o fluxo automatizado de Smoke Tests.</p>
+                </div>
+            </a>
+
+        </div>
+    </div>
+
+    <script>
+        const ENV_INFO = {
+            TRG:  { desc: '🟡 Conectado ao ambiente de TRG.', url: 'https://apitrg.vtal.com.br',  cls: 'TRG'  },
+            TI:   { desc: '🟢 Conectado ao ambiente de TI.',         url: 'https://api-ti1.vtal.com.br', cls: 'TI'   },
+            TRG2: { desc: '🔵 Conectado ao ambiente de TRG2.',           url: 'https://api-ti2.vtal.com.br', cls: 'TRG2' }
+        };
+
+        function onAmbienteChange() {
+            const amb = document.getElementById('ambienteSelect').value;
+            const info = ENV_INFO[amb];
+
+            // Atualiza descrição
+            document.getElementById('envDescription').textContent = info.desc;
+
+            // Atualiza banner
+            const banner = document.getElementById('envBanner');
+            banner.className = `env-banner ${info.cls}`;
+            document.getElementById('envBannerText').innerHTML =
+                `Ambiente ativo: <strong>${amb}</strong> — ${info.url}`;
+
+            // Atualiza links dos cards com o ambiente selecionado
+            document.getElementById('linkCriarOS').href = `createos.html?ambiente=${amb}`;
+            document.getElementById('linkLote').href    = `viabilidadelote.html?ambiente=${amb}`;
+            // NOVA LINHA AQUI
+            document.getElementById('linkAPIs').href    = `apis.html?ambiente=${amb}`;
+        }
+
+        // Inicializa com valor padrão
+        onAmbienteChange();
+    </script>
+</body>
+</html>

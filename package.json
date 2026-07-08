@@ -1,0 +1,26 @@
+{
+  "name": "portal-vtal",
+  "version": "1.0.0",
+  "description": "Portal de Viabilidade V.tal",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@playwright/test": "^1.55.0",
+    "axios": "^1.18.1",
+    "better-sqlite3": "^12.11.1",
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "express-session": "^1.18.0",
+    "imapflow": "^1.4.3",
+    "modules": "^0.4.0",
+    "multer": "^2.2.0",
+    "mysql2": "^3.22.5",
+    "node-fetch": "^2.7.0",
+    "xlsx": "^0.18.5"
+  }
+}

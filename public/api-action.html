@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Action — PortalNode</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ==========================================================
+           API-ACTION.HTML — Complementos visuais sobre style.css
+           (Mesma identidade da apis.html polida)
+           ========================================================== */
+
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid var(--vtal-yellow);
+            flex-wrap: wrap;
+        }
+        .page-header > div:first-child { flex: 1; min-width: 280px; }
+        .page-header h1 {
+            margin: 0 0 8px 0; padding: 0; border: none; text-align: left; font-size: 2em;
+        }
+        .page-header .subtitle { color: var(--vtal-gray-dark); font-size: 0.95em; margin: 0; }
+        .page-header .back-link {
+            display: inline-flex; align-items: center; gap: 4px;
+            color: var(--vtal-gray-dark); text-decoration: none;
+            font-size: 0.88em; padding: 6px 12px;
+            border: 1px solid #dee2e6; border-radius: 6px;
+            transition: all 0.2s; background: var(--vtal-white);
+            margin-bottom: 12px;
+        }
+        .page-header .back-link:hover {
+            background: #f8f9fa; border-color: var(--vtal-gray-dark); text-decoration: none;
+        }
+
+        .header-actions {
+            display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+        }
+        .home-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 16px; background: var(--vtal-white);
+            color: var(--vtal-gray-dark); border: 1px solid var(--vtal-gray-medium);
+            border-radius: 20px; text-decoration: none;
+            font-size: 0.85em; font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            transition: all 0.2s; font-family: inherit;
+        }
+        .home-link:hover {
+            background: var(--vtal-yellow); border-color: var(--vtal-yellow);
+            color: var(--vtal-black); text-decoration: none;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,215,0,0.35);
+        }
+        .page-header .env-selector-wrapper { margin: 0; min-width: 240px; }
+        .env-selector-wrapper .env-banner { display: inline-flex; margin-top: 8px; }
+
+        .panel-section {
+            margin-bottom: 22px; padding: 20px 24px;
+            border: 1px solid #e9ecef; border-radius: 10px; background: #fcfcfc;
+        }
+        .panel-section h3 {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 1.1em; margin: 0 0 16px 0; color: var(--vtal-black);
+        }
+        .step-number {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--vtal-yellow); color: var(--vtal-black);
+            font-weight: 700; font-size: 0.95em;
+        }
+
+        .form-field { margin-bottom: 14px; }
+        .form-field > label {
+            display: block; margin-bottom: 6px;
+            font-weight: 600; color: var(--vtal-black); font-size: 0.88em;
+        }
+        .form-field input, .form-field select { margin-bottom: 0; }
+        .form-field .field-hint {
+            display: block; margin-top: 4px; font-size: 0.78em; color: #666; font-style: italic;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+        .toggle-row {
+            display: flex; align-items: center; gap: 14px;
+            padding: 12px 14px; background: #f8f9fa;
+            border-radius: 6px; border: 1px solid #e9ecef;
+        }
+        .toggle-row > label {
+            display: flex; align-items: center; gap: 10px;
+            margin: 0; cursor: pointer; font-size: 0.88em; font-weight: 500;
+        }
+        .toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: 0.2s; border-radius: 20px;
+        }
+        .slider::before {
+            position: absolute; content: "";
+            height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: white; transition: 0.2s; border-radius: 50%;
+        }
+        .toggle input:checked + .slider { background-color: var(--vtal-yellow); }
+        .toggle input:checked + .slider::before { transform: translateX(16px); }
+        .toggle-hint { font-size: 0.78em; color: #666; font-style: italic; }
+
+        .os-details {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px 18px; padding: 14px 16px; background: #f8f9fa;
+            border-radius: 8px; border: 1px solid #e9ecef; margin-top: 12px;
+        }
+        .os-details .field { display: flex; flex-direction: column; gap: 2px; }
+        .os-details .field-label {
+            font-size: 0.72em; color: #666; text-transform: uppercase;
+            letter-spacing: 0.5px; font-weight: 600;
+        }
+        .os-details .field-value { font-size: 0.9em; color: var(--vtal-black); font-weight: 500; }
+        .text-muted { color: #999 !important; }
+
+        .manual-group {
+            margin-top: 12px; padding: 14px 16px; background: #fff8e1;
+            border-left: 3px solid var(--vtal-yellow); border-radius: 6px;
+        }
+        .manual-group[aria-hidden="true"] { display: none; }
+
+        .btn-row {
+            display: flex; gap: 12px; justify-content: flex-end;
+            margin-top: 28px; padding-top: 20px;
+            border-top: 2px solid var(--vtal-gray-light);
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: var(--vtal-yellow) !important; color: var(--vtal-black) !important;
+            margin: 0 !important;
+        }
+        .btn-primary:hover { background: var(--vtal-yellow-dark) !important; }
+        .btn-ghost {
+            background: transparent !important; color: var(--vtal-gray-dark) !important;
+            border: 1px solid var(--vtal-gray-medium) !important;
+            box-shadow: none !important; margin: 0 !important;
+            text-decoration: none; display: inline-flex; align-items: center;
+        }
+        .btn-ghost:hover {
+            background: #f8f9fa !important; border-color: var(--vtal-gray-dark) !important;
+            color: var(--vtal-black) !important; transform: none !important; text-decoration: none;
+        }
+        .api-spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--vtal-black);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            margin-right: 6px; vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 720px) {
+            .page-header { flex-direction: column; align-items: stretch; }
+            .page-header > div:first-child { min-width: auto; }
+            .page-header .env-selector-wrapper { min-width: auto; }
+            .btn-row { flex-direction: column-reverse; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="page-header">
+        <div>
+            <a href="apis.html" class="back-link">← APIs</a>
+            <h1 id="actionTitle">Carregando…</h1>
+            <p id="actionDescription" class="subtitle"></p>
+        </div>
+        <div class="header-actions">
+            <a href="index.html" class="home-link">🏠 Voltar para Home</a>
+            <div class="env-selector-wrapper">
+                <label for="ambienteSelect">Ambiente</label>
+                <select id="ambienteSelect" onchange="onAmbienteChange()">
+                    <option value="TRG">TRG</option>
+                    <option value="TI">TI</option>
+                    <option value="TRG2">TRG2</option>
+                </select>
+                <span id="envBanner" class="env-banner ambiente-TRG" data-ambiente="TRG">TRG</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="apiMessage" class="message" role="status" aria-live="polite" style="display:none;"></div>
+
+    <div id="formContainer">
+
+        <!-- 1. OS do Bolsão -->
+        <section class="panel-section">
+            <h3><span class="step-number">1</span> Ordem de Serviço</h3>
+            <div class="form-field">
+                <label for="osSelector">Selecione uma OS do bolsão</label>
+                <select id="osSelector" onchange="loadOsDetails()">
+                    <option value="">Carregando OS...</option>
+                </select>
+                <span class="field-hint">A OS selecionada herda automaticamente o Subscriber ID, complemento e produto.</span>
+            </div>
+            <div class="toggle-row" style="margin-top: 15px;">
+                <label for="manualSubscriberIdToggle">
+                    <span class="toggle">
+                        <input type="checkbox" id="manualSubscriberIdToggle" onchange="toggleManualSubscriberId()">
+                        <span class="slider"></span>
+                    </span>
+                    Usar OS manual (fora do bolsão)
+                </label>
+                <span class="toggle-hint">Ative para OS criada fora do PortalNode.</span>
+            </div>
+            <div id="manualSubscriberIdGroup" class="manual-group" aria-hidden="true">
+                <div class="form-field">
+                    <label for="manualSubscriberIdInput">Subscriber ID (manual)</label>
+                    <input type="text" id="manualSubscriberIdInput" placeholder="Ex: TDMQAOSS12345678" disabled>
+                </div>
+            </div>
+            <div id="osDetails" class="os-details">
+                <div class="field"><span class="field-label">SA ID</span><span class="field-value text-muted">-</span></div>
+                <div class="field"><span class="field-label">Order ID</span><span class="field-value text-muted">-</span></div>
+                <div class="field"><span class="field-label">Subscriber ID</span><span class="field-value text-muted">-</span></div>
+                <div class="field"><span class="field-label">CP</span><span class="field-value text-muted">-</span></div>
+                <div class="field"><span class="field-label">Ambiente</span><span class="field-value text-muted">-</span></div>
+                <div class="field"><span class="field-label">Endereço</span><span class="field-value text-muted">-</span></div>
+            </div>
+            <div id="osCountBadge" style="margin-top:10px;font-size:0.85em;color:#666;">— OSs disponíveis</div>
+        </section>
+
+        <!-- 2. Dados do Cliente -->
+        <section class="panel-section">
+            <h3><span class="step-number">2</span> Dados do Cliente</h3>
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="customerNameInput">Nome do Cliente *</label>
+                    <input type="text" id="customerNameInput" placeholder="Ex: Thiales Teste">
+                </div>
+                <div class="form-field">
+                    <label>Business Unity</label>
+                    <input type="text" value="varejo" disabled>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Fantasy Name</label>
+                    <input type="text" value="InterHome Internet" disabled>
+                </div>
+                <div class="form-field">
+                    <label>Telefone Principal</label>
+                    <input type="text" value="000000000" disabled>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Endereço -->
+        <section class="panel-section">
+            <h3><span class="step-number">3</span> Endereço</h3>
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="addressIdInput">Address ID *</label>
+                    <input type="number" id="addressIdInput" placeholder="Ex: 330057">
+                </div>
+                <div class="form-field">
+                    <label for="inventoryIdInput">Inventory ID *</label>
+                    <input type="text" id="inventoryIdInput" placeholder="Ex: 4627650">
+                </div>
+            </div>
+            <div id="complementFromOs" class="form-row" style="display: none;">
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label>Complemento (do OS)</label>
+                    <input type="text" id="complementDisplay" disabled>
+                </div>
+            </div>
+            <div id="complementManual" class="form-row" style="display: none;">
+                <div class="form-field">
+                    <label for="complementTypeInput">Tipo do Complemento *</label>
+                    <input type="text" id="complementTypeInput" placeholder="Ex: APTO">
+                </div>
+                <div class="form-field">
+                    <label for="complementValueInput">Valor do Complemento *</label>
+                    <input type="text" id="complementValueInput" placeholder="Ex: 101">
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Produto -->
+        <section class="panel-section">
+            <h3><span class="step-number">4</span> Produto</h3>
+            <div id="productFromOs" class="form-row" style="display: none;">
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label>Catalog ID (do OS)</label>
+                    <input type="text" id="productCatalogDisplay" disabled>
+                </div>
+            </div>
+            <div id="productManual" class="form-row" style="display: none;">
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label for="catalogIdSelect">Catalog ID *</label>
+                    <select id="catalogIdSelect">
+                        <option value="">Selecione um produto...</option>
+                        <option value="BL_1000MB">BL_1000MB</option>
+                        <option value="VOIP">Voip</option>
+                        <option value="BL_250MB">BL_250MB</option>
+                        <option value="BL_400MB">BL_400MB</option>
+                        <option value="BL_500MB">BL_500MB</option>
+                        <option value="BL_600MB">BL_600MB</option>
+                        <option value="BL_700MB">BL_700MB</option>
+                        <option value="BL_2000MB">BL_2000MB</option>
+                        <option value="MESH_1P">MESH_1P</option>
+                        <option value="MESH_2P">MESH_2P</option>
+                        <option value="MESH_3P">MESH_3P</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label>Ação do Produto (derivada do botão)</label>
+                    <input type="text" id="productActionDisplay" disabled>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Metadados (read-only) -->
+        <section class="panel-section">
+            <h3><span class="step-number">5</span> Metadados da Requisição (auto)</h3>
+            <div class="os-details">
+                <div class="field">
+                    <span class="field-label">Correlation Order</span>
+                    <span class="field-value text-muted">Gerado no envio (PORTAL-API-{timestamp})</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Associated Document</span>
+                    <span class="field-value text-muted">= Subscriber ID</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Associated Document Date</span>
+                    <span class="field-value text-muted">ISO now (gerado no envio)</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Type</span>
+                    <span class="field-value" id="metaType">—</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">InfraType</span>
+                    <span class="field-value">FTTH</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="btn-row">
+            <a href="apis.html" class="btn btn-ghost">← Voltar</a>
+            <button type="button" id="executeApiButton" class="btn btn-primary" onclick="executeApiAction()">
+                <span id="apiSpinner" class="api-spinner" aria-hidden="true"></span>
+                <span id="buttonActionText">Executar</span>
+            </button>
+        </div>
+    </div>
+</div>
+<script src="js/main.js"></script>
+<script src="js/api-action.js"></script>
+</body>
+</html>

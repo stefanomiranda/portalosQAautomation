@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostico - PortalNode</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .countdown-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            font-weight: 700;
+            background: var(--success-color);
+            color: #fff;
+        }
+        .countdown-badge.warn    { background: var(--warn-color); }
+        .countdown-badge.expired { background: var(--error-color); }
+        .result-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .result-card.ok  { border-left: 4px solid var(--success-color); }
+        .result-card.nok { border-left: 4px solid var(--error-color);   }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <a href="index.html" class="back-home">&larr; Voltar ao Início</a>
+
+    <h1>🔬 Diagnostico</h1>
+
+    <div style="text-align:center;">
+        <span class="env-badge TRG" id="envBadge">
+            <span class="env-dot"></span>
+            <span id="envBadgeText">TRG</span>
+        </span>
+    </div>
+
+    <div class="step-indicator">
+        <div class="step active" id="step1"><div class="step-circle">1</div><div class="step-label">Cliente</div></div>
+        <div class="step-line"   id="line1"></div>
+        <div class="step"        id="step2"><div class="step-circle">2</div><div class="step-label">MOCK</div></div>
+        <div class="step-line"   id="line2"></div>
+        <div class="step"        id="step3"><div class="step-circle">3</div><div class="step-label">Executar</div></div>
+        <div class="step-line"   id="line3"></div>
+        <div class="step"        id="step4"><div class="step-circle">4</div><div class="step-label">Lista</div></div>
+    </div>
+
+    <div id="statusMessage" class="message info hidden"></div>
+
+    <div class="section" id="clienteSection">
+        <h2>1) Identificacao do Cliente</h2>
+
+        <label for="cpSelect">CP (Cliente Parceiro):</label>
+        <select id="cpSelect">
+            <option value="">Carregando CPs...</option>
+        </select>
+
+        <label for="subscriberIdInput">Subscriber ID:</label>
+        <input type="text" id="subscriberIdInput" placeholder="Ex: Teste2503" value="Teste2503">
+
+        <label for="gponInput">GPON:</label>
+        <input type="text" id="gponInput" placeholder="Ex: A00000VK6" value="A00000VK6">
+
+        <label for="ambienteSelect">Ambiente:</label>
+        <select id="ambienteSelect">
+            <option value="TRG">🟡 TRG</option>
+            <option value="TI">🟢 TI</option>
+            <option value="TRG2">🔵 TRG2</option>
+        </select>
+
+        <button id="prepararMockBtn">🔧 Preparar MOCK</button>
+    </div>
+
+    <div class="section hidden" id="execucaoSection">
+        <h2>2) Execucao do Diagnostico</h2>
+        <p><strong>Status do MOCK:</strong> <span id="mockStatus" class="env-tag TRG">aguardando</span></p>
+        <p><strong>Subscriber:</strong> <span id="execSubscriber"></span></p>
+        <p><strong>GPON:</strong> <span id="execGpon"></span></p>
+
+        <div style="margin-top:20px;">
+            <button id="executarDiagnosticoBtn">🧪 Executar Diagnostico Completo V2</button>
+        </div>
+
+        <div id="resultadoDiagnostico" class="hidden" style="margin-top:20px;">
+            <h3>Resultado</h3>
+            <p><strong>Status:</strong> <span id="resultadoStatus"></span></p>
+            <p><strong>Auditoria ID:</strong> <span id="resultadoAuditoriaId"></span></p>
+            <p><strong>Criado em:</strong> <span id="resultadoCriadoEm"></span></p>
+            <p><strong>Expira em:</strong> <span id="resultadoExpiraEm" class="countdown-badge"></span></p>
+        </div>
+    </div>
+
+    <div class="section hidden" id="listaSection">
+        <h2>3) Diagnosticos Gerados</h2>
+        <div id="diagnosticosList">Carregando...</div>
+    </div>
+
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/diagnostico.js"></script>
+</body>
+</html>
