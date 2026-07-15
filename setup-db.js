@@ -87,6 +87,15 @@ const statements = [
 
   `CREATE INDEX IF NOT EXISTS idx_tt_status
      ON trouble_tickets(status)`
+     
+   `CREATE TABLE IF NOT EXISTS seriais_usados (
+   serial     TEXT PRIMARY KEY,
+   tipo       TEXT NOT NULL,
+   ordem_id   TEXT,
+   sa_id      TEXT,
+   job_id     TEXT,
+   created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`
 ];
 
 for (let i = 0; i < statements.length; i++) {

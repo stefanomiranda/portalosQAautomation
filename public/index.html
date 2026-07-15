@@ -134,11 +134,11 @@
         <!-- Cards de navegação -->
         <div class="home-options">
 
-            <a class="home-option-card" id="linkCriarOS" href="createos.html?ambiente=TRG">
+            <a class="home-option-card" id="linkCriarOS" href="selecionar-tipo-os.html?ambiente=TRG">
                 <div class="card-icon">📋</div>
                 <div class="card-body">
                     <h2>Criar Ordem de Serviço</h2>
-                    <p>Inicia o fluxo completo para a criação de uma nova Ordem de Serviço.</p>
+                    <p>Inicia o fluxo para a criação de uma nova OS.</p>
                 </div>
             </a>
             
@@ -198,7 +198,7 @@
                 `Ambiente ativo: <strong>${amb}</strong> — ${info.url}`;
 
             // Atualiza links dos cards com o ambiente selecionado
-            document.getElementById('linkCriarOS').href = `createos.html?ambiente=${amb}`;
+            document.getElementById('linkCriarOS').href = `selecionar-tipo-os.html?ambiente=${amb}`;
             document.getElementById('linkLote').href    = `viabilidadelote.html?ambiente=${amb}`;
             // NOVA LINHA AQUI
             document.getElementById('linkAPIs').href    = `apis.html?ambiente=${amb}`;

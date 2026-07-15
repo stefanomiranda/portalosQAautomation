@@ -21,10 +21,12 @@ function makeLogger(stepName) {
     info:  (...a) => console.log(stamp(), tag, ...a),
   };
 }
+
 function ensureDir(dir) {
   if (!dir) return;
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
+
 /**
  * Espera um locator (Page ou Locator) satisfazer uma condição.
  */
@@ -62,7 +64,6 @@ async function waitForCondition(page, checkFn, opts = {}) {
 async function takeScreenshot(page, stepName, suffix = 'state') {
   try {
     const dir = path.join(FSL_CONFIG.ARTIFACTS_DIR, stepName);
-    const fs = require('fs');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     const file = path.join(dir, `${Date.now()}-${suffix}.png`);
@@ -95,25 +96,6 @@ async function waitForNav(page, opts = {}) {
 
 /**
  * Helper "modo descoberta".
- *
- * Aceita UMA hint (objeto) ou VÁRIAS (array). O retorno é um **Proxy**
- * que se comporta como o PRIMEIRO locator MAS também expõe métodos de
- * grupo:
- *
- *   smartLocator(page, h1)                 → funciona como Locator direto
- *     .fill(x), .click(), .isVisible(), .waitFor()
- *   smartLocator(page, [h1, h2, h3])
- *     .anyVisible({timeoutMs})             → primeiro que estiver visível
- *     .nth(i)                              → i-ésimo candidato
- *     .all()                               → array com todos
- *     .first()                             → primeiro candidato
- *
- * Estratégias (dentro de UMA hint, primeira que casa):
- *  1) hints.css        → page.locator(css)
- *  2) hints.role       → page.getByRole(role, { name, exact })
- *  3) hints.text       → page.getByText(text, { exact })
- *  4) hints.label      → page.getByLabel(label, { exact })
- *  5) hints.placeholder→ page.getByPlaceholder(placeholder, { exact })
  */
 function buildLocator(page, hints) {
   if (hints.css)        return page.locator(hints.css);
@@ -141,10 +123,6 @@ function smartLocator(page, hintsOrArray) {
   const group = {
     nth(i) { return locators[i]; },
     all() { return locators; },
-    /**
-     * Tenta cada candidato em ordem; devolve o primeiro que estiver visível
-     * dentro do timeout (default 5s). Lança erro descritivo se nenhum aparecer.
-     */
     async anyVisible({ timeoutMs = 5000 } = {}) {
       const deadline = Date.now() + timeoutMs;
       let lastErr = null;
@@ -163,8 +141,6 @@ function smartLocator(page, hintsOrArray) {
     },
   };
 
-  // Proxy: o default é o PRIMEIRO locator (preenche, clica, etc.);
-  // mas .anyVisible/.nth/.first/.all vêm do grupo.
   return new Proxy(first, {
     get(target, prop) {
       if (prop in group) return group[prop];
@@ -190,19 +166,6 @@ async function readStableText(page, locator, opts = {}) {
   return prev || '';
 }
 
-/**
- * Tenta vários locators em paralelo (polling) e devolve o PRIMEIRO que
- * estiver visível. É muito mais robusto que encadear .or().or().first(),
- * porque o .or() nativo do Playwright espera o timeout de cada um antes
- * de tentar o próximo.
- *
- * @param {Page} page
- * @param {Locator[]} locators
- * @param {Object} opts
- * @param {number} opts.timeoutMs  - tempo total de espera (default 10s)
- * @param {number} opts.pollMs     - intervalo entre tentativas (default 500ms)
- * @returns {Promise<Locator|null>}
- */
 async function findFirstVisible(page, locators, { timeoutMs = 10_000, pollMs = 500 } = {}) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -217,9 +180,154 @@ async function findFirstVisible(page, locators, { timeoutMs = 10_000, pollMs = 5
   return null;
 }
 
+/**
+ * Espera a SA ficar "pronta para interação" no Lightning.
+ *
+ * NOTA: a partir do patch newPage (buscarSA abre uma Page standalone
+ * fora do Service Console), a SA é renderizada DIRETAMENTE no main
+ * frame. Por isso esta função olha o document do main frame
+ * (page.evaluate, sem iterar page.frames()). Isso elimina a classe de
+ * falso positivo que apareceu quando a SA estava em iframe aninhado
+ * do Service Console.
+ *
+ * Critérios de "ready":
+ *   (a) Skeleton VISÍVEL ignorado se offsetWidth/Height === 0.
+ *   (b) appointmentText !== '' → PRONTO (sinal forte, basta).
+ *   (c) bodyHasIt && !hasSkeleton → PRONTO (fallback).
+ */
+async function waitForSAReady(page, saQuery, opts = {}) {
+  const timeoutMs       = opts.timeoutMs       ?? 45_000;
+  const pollMs          = opts.pollMs          ?? 500;
+  const label           = opts.label           ?? 'SA pronta';
+  const screenshotOnTimeout = opts.screenshotOnTimeout ?? true;
+  const stepName        = opts.stepName        ?? 'waitForSAReady';
+
+  if (!saQuery || typeof saQuery !== 'string') {
+    throw new Error('waitForSAReady: saQuery é obrigatório (ex.: "SA-914073")');
+  }
+
+  const saDigits = saQuery.replace(/\D+/g, '');
+  if (!saDigits) {
+    throw new Error(`waitForSAReady: saQuery="${saQuery}" não contém dígitos.`);
+  }
+
+  const deadline = Date.now() + timeoutMs;
+  let lastStatus = null;
+
+  while (Date.now() < deadline) {
+    let status;
+    try {
+      status = await page.evaluate(
+        function ({ queryFull, queryDigits }) {
+          // 1) Skeleton/spinner VISÍVEL (offsetWidth/Height > 0)
+          const skeletonCandidates = document.querySelectorAll(
+            '.slds-skeleton, lightning-spinner, .aura-spinner, ' +
+            '.placeholder, .slds-spinner_container, ' +
+            'lightning-spinner[class*="slds"], [data-aura-class*="placeholder"], ' +
+            '.forceBlockingPanel, .slds-is-relative.slds-spinner_container, ' +
+            'aura-spinner, .auraLoadingBox'
+          );
+          let hasSkeleton = false;
+          for (const el of skeletonCandidates) {
+            if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+              hasSkeleton = true;
+              break;
+            }
+          }
+          if (document.body && document.body.classList && document.body.classList.contains('auraLoadingBox')) {
+            hasSkeleton = true;
+          }
+
+          // 2) <lightning-formatted-text> visível com o número da SA
+          const nodes = Array.from(
+            document.querySelectorAll(
+              'lightning-formatted-text, .slds-form-element__static, span.uiOutputText'
+            )
+          );
+          let appointmentText = '';
+          for (const n of nodes) {
+            const t = (n.textContent || '').trim();
+            if (!t) continue;
+            if (t === queryFull ||
+                (t.includes(queryDigits) && t.length < 80 &&
+                 /SA[-\s]?\d/i.test(t))) {
+              const r = n.getBoundingClientRect();
+              if (r.width > 0 && r.height > 0) {
+                appointmentText = t;
+                break;
+              }
+            }
+          }
+
+          // 3) Bônus: número aparece no body inteiro?
+          const bodyText = (document.body && document.body.innerText) || '';
+          const bodyHasIt =
+            bodyText.includes(queryFull) ||
+            (bodyText.includes(queryDigits) && /SA[-\s]?\d/i.test(bodyText));
+
+          // 4) h1 atual
+          const h1El = document.querySelector(
+            'h1, .slds-page-header__title, .entityNameTitle'
+          );
+          const h1 = h1El ? (h1El.textContent || '').trim() : '';
+
+          return { hasSkeleton, appointmentText, bodyHasIt, h1 };
+        },
+        { queryFull: saQuery, queryDigits: saDigits }
+      );
+    } catch (e) {
+      lastStatus = { hasSkeleton: true, appointmentText: '', bodyHasIt: false, h1: `[evaluate-falhou: ${(e && e.message || '').slice(0, 80)}]` };
+      await new Promise(r => setTimeout(r, pollMs));
+      continue;
+    }
+
+    lastStatus = status;
+
+    const ready =
+      status.appointmentText !== '' ||
+      (status.bodyHasIt && !status.hasSkeleton);
+
+    if (ready) {
+      return {
+        ready: true,
+        h1: status.h1,
+        appointmentNode: status.appointmentText,
+        bodyHasIt: status.bodyHasIt,
+      };
+    }
+
+    await new Promise(r => setTimeout(r, pollMs));
+  }
+
+  // Timeout — monta diagnóstico rico
+  let file = null;
+  if (screenshotOnTimeout) {
+    try {
+      file = await takeScreenshot(page, stepName, 'sa-not-ready');
+    } catch (_) { /* ignore */ }
+  }
+
+  const url = page.url();
+  const title = await page.title().catch(() => '?');
+  const errLines = [
+    `waitForSAReady: timeout (${Math.round(timeoutMs/1000)}s) esperando SA "${saQuery}" ficar pronta.`,
+    `  step:       ${stepName}`,
+    `  url:        ${url}`,
+    `  title:      "${title}"`,
+    `  h1:         "${(lastStatus && lastStatus.h1) || ''}"`,
+    `  appointmentNode observado: "${(lastStatus && lastStatus.appointmentText) || '(vazio)'}"`,
+    `  bodyHasIt:  ${(lastStatus && lastStatus.bodyHasIt) || false}`,
+    `  skeleton:   ${(lastStatus && lastStatus.hasSkeleton) || false}`,
+    `  screenshot: ${file || '(falhou)'}`,
+    `  Causa provável: a SA pode estar num iframe (Service Console) que o page.frames() não lista.`,
+  ];
+  throw new Error(errLines.join('\n'));
+}
+
 module.exports = {
   makeLogger,
   waitForCondition,
+  waitForSAReady,
   takeScreenshot,
   smartLocator,
   readStableText,

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retirada com Encerramento Externo — PortalNode</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ==========================================================
+           retirada-encerramento.html
+           Complementos visuais sobre style.css
+           (Identidade V.tal: amarelo #FFD700, Segoe UI, sombras)
+           Espelha o layout da Instalação com Encerramento Externo.
+           ========================================================== */
+
+        .re-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) { .re-grid { grid-template-columns: 1fr; } }
+
+        /* ---- Step indicator (3 steps para Retirada: loginSOM → buscarWorklist → t063) ---- */
+        .re-step-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 6px;
+            margin: 6px 0 18px;
+            flex-wrap: wrap;
+        }
+        .re-step {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 10px 14px;
+            background: #f8f9fa;
+            border: 1.5px solid var(--vtal-gray-medium);
+            border-radius: 10px;
+            min-width: 110px;
+            font-size: 0.82em;
+            color: var(--vtal-gray-dark);
+            transition: all 0.25s;
+        }
+        .re-step .re-step-circle {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--vtal-gray-light);
+            color: var(--vtal-gray-dark);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.9em;
+        }
+        .re-step.active {
+            background: #fffbe6;
+            border-color: var(--vtal-yellow);
+            color: var(--vtal-black);
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.15);
+        }
+        .re-step.active .re-step-circle {
+            background: var(--vtal-yellow);
+            color: var(--vtal-black);
+        }
+        .re-step.ok {
+            background: #e8f5e9;
+            border-color: var(--success-color);
+            color: #1a5c2a;
+        }
+        .re-step.ok .re-step-circle {
+            background: var(--success-color);
+            color: #fff;
+        }
+        .re-step.erro {
+            background: #f8d7da;
+            border-color: var(--error-color);
+            color: #721c24;
+        }
+        .re-step.erro .re-step-circle {
+            background: var(--error-color);
+            color: #fff;
+        }
+
+        /* ---- Bolsão list ---- */
+        .re-bolsao-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 10px; gap: 10px; flex-wrap: wrap;
+        }
+        .re-bolsao-count {
+            font-size: 0.82em;
+            color: var(--vtal-gray-dark);
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .re-bolsao-refresh {
+            background: var(--vtal-white) !important;
+            color: var(--vtal-gray-dark) !important;
+            border: 1px solid var(--vtal-gray-medium) !important;
+            padding: 6px 14px !important;
+            border-radius: 6px !important;
+            font-size: 0.82em !important;
+            font-weight: 600 !important;
+            cursor: pointer;
+            box-shadow: none !important;
+            margin: 0 !important;
+            font-family: inherit;
+        }
+        .re-bolsao-refresh:hover {
+            background: var(--vtal-yellow) !important;
+            border-color: var(--vtal-yellow) !important;
+            color: var(--vtal-black) !important;
+            transform: none !important;
+        }
+
+        .re-bolsao-item {
+            padding: 12px 14px;
+            border: 1.5px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            background: #fff;
+            transition: all 0.15s;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .re-bolsao-item:hover {
+            border-color: var(--vtal-yellow);
+            background: #fffbe6;
+            transform: translateX(2px);
+        }
+        .re-bolsao-item .sa {
+            font-weight: 700;
+            color: var(--vtal-black);
+        }
+        .re-bolsao-item .meta {
+            font-size: 0.78em;
+            color: var(--vtal-gray-dark);
+        }
+        .re-bolsao-item .meta code {
+            background: #f8f9fa;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+        .re-bolsao-empty {
+            padding: 20px;
+            text-align: center;
+            color: var(--vtal-gray-dark);
+            background: #f8f9fa;
+            border: 1px dashed #ced4da;
+            border-radius: 8px;
+            font-size: 0.88em;
+        }
+
+        /* ---- Log ---- */
+        .re-log {
+            background: #1a1d20;
+            color: #d1d5db;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.82em;
+            max-height: 320px;
+            overflow-y: auto;
+            line-height: 1.55;
+            border: 1px solid #2d3135;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        .re-log::-webkit-scrollbar { width: 8px; }
+        .re-log::-webkit-scrollbar-track { background: #1a1d20; }
+        .re-log::-webkit-scrollbar-thumb { background: #495057; border-radius: 4px; }
+
+        /* ---- Resultado ---- */
+        .re-result {
+            background: #f1f8e9;
+            border: 1.5px solid #c5e1a5;
+            border-left: 5px solid var(--success-color);
+            border-radius: 8px;
+            padding: 16px 18px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            margin: 0;
+        }
+        .re-result.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            border-left-color: var(--error-color);
+            color: #721c24;
+        }
+
+        /* ---- Histórico ---- */
+        .re-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88em;
+        }
+        .re-table th, .re-table td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .re-table th {
+            background: #f8f9fa;
+            font-weight: 700;
+            color: var(--vtal-gray-dark);
+            text-transform: uppercase;
+            font-size: 0.78em;
+            letter-spacing: 0.5px;
+        }
+        .re-table tr:hover td { background: #fafafa; }
+        .re-table td code {
+            background: #f8f9fa;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95em;
+        }
+
+        .re-hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header class="page-header">
+        <div>
+            <h1>📤 Retirada com Encerramento Externo</h1>
+            <p class="subtitle">Esteira automatizada de T063 (retirar equipamento) no SOM. Selecione do bolsão ou digite SA + AssociatedDocument manualmente.</p>
+        </div>
+        <div class="header-actions">
+            <a href="index.html" class="home-link">← Início</a>
+            <div class="env-selector-wrapper">
+                <label for="ambienteSelect">Ambiente</label>
+                <select id="ambienteSelect" onchange="onAmbienteChange()">
+                    <option value="TRG">TRG</option>
+                    <option value="TI">TI</option>
+                    <option value="TRG2">TRG2</option>
+                </select>
+                <span id="envBadge" class="env-badge TRG">
+                    <span class="env-dot"></span>
+                    <span id="envBadgeText">TRG</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <div id="statusMessage" class="message info re-hidden"></div>
+
+    <div class="re-grid">
+
+        <!-- COLUNA 1: BOLSÃO + FORMULÁRIO -->
+        <div>
+            <section class="section">
+                <h3>📥 Importar do Bolsão</h3>
+                <div class="re-bolsao-toolbar">
+                    <span id="bolsaoCount" class="re-bolsao-count">— OSs</span>
+                    <button type="button" class="re-bolsao-refresh" onclick="carregarBolsao()">↻ Atualizar</button>
+                </div>
+                <div id="bolsaoContainer">
+                    <div class="re-bolsao-empty">Carregando lista do bolsão…</div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>⚙️ Parâmetros da Esteira</h3>
+
+                <div class="form-field">
+                    <label for="saInput">SA</label>
+                    <input type="text" id="saInput" placeholder="Ex: 916048 ou SA-916048" autocomplete="off">
+                    <span class="field-hint">SA da ordem. Aceita com ou sem o prefixo "SA-".</span>
+                </div>
+
+                <div class="form-field">
+                    <label for="adInput">AssociatedDocument</label>
+                    <input type="text" id="adInput" placeholder="Ex: TDMQAOSS3391893375" autocomplete="off">
+                    <span class="field-hint">Valor que vai no campo Reference da Worklist do SOM. Se vazio, será resolvido do bolsão automaticamente.</span>
+                </div>
+
+                <div class="form-field">
+                    <label for="ambienteExecSelect">Ambiente de execução</label>
+                    <select id="ambienteExecSelect">
+                        <option value="TRG">TRG</option>
+                        <option value="TRG2">TRG2</option>
+                        <option value="TI">TI</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Credenciais do SOM <span class="field-hint">(opcional · deixe vazio para usar .env)</span></label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label for="somUserInput" style="font-size:0.78em;color:var(--vtal-gray-dark);">Usuário</label>
+                            <input type="text" id="somUserInput" placeholder="ex: vtal_user" autocomplete="off">
+                        </div>
+                        <div>
+                            <label for="somPassInput" style="font-size:0.78em;color:var(--vtal-gray-dark);">Senha</label>
+                            <input type="password" id="somPassInput" placeholder="••••••••" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <span class="field-hint">A senha não fica salva — só é usada neste job e descartada no fim.</span>
+                </div>
+
+                <div class="btn-row">
+                    <button type="button" class="btn btn-ghost" onclick="limparForm()">↻ Limpar</button>
+                    <button type="button" id="iniciarBtn" class="btn btn-primary" onclick="iniciarExecucao()">▶ Iniciar Esteira</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- COLUNA 2: STEP INDICATOR + LOG + RESULTADO -->
+        <div>
+            <section class="section">
+                <h3>🧭 Progresso</h3>
+                <div class="re-step-indicator" id="stepList">
+                    <div class="re-step" data-step="loginSOM"><div class="re-step-circle">1</div>loginSOM</div>
+                    <div class="re-step" data-step="buscarWorklist"><div class="re-step-circle">2</div>buscarWorklist</div>
+                    <div class="re-step" data-step="t063"><div class="re-step-circle">3</div>t063</div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>📋 Log de Execução</h3>
+                <pre id="logPanel" class="re-log">Aguardando início…</pre>
+            </section>
+
+            <section class="section re-hidden" id="resultSection">
+                <h3>✅ Resultado</h3>
+                <pre id="resultPanel" class="re-result"></pre>
+            </section>
+        </div>
+    </div>
+
+    <section class="section">
+        <h3>📜 Histórico de Encerramentos Externos de Retirada</h3>
+        <table class="re-table" id="historicoTable">
+            <thead>
+                <tr>
+                    <th>SA</th>
+                    <th>AssociatedDocument</th>
+                    <th>Nº de Série Retirado</th>
+                    <th>Matrícula</th>
+                    <th>Encerrada em</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="5" style="text-align:center;color:var(--vtal-gray-dark);padding:18px;">— nenhuma retirada encerrada externamente ainda —</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+</div>
+
+<script src="js/retirada-encerramento.js"></script>
+</body>
+</html>

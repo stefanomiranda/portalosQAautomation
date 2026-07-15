@@ -75,6 +75,49 @@ app.get('/api/cps', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// POST /api/gerar-token
+//   Retorna o accessToken gerado para o CP+ambiente.
+//   Usado pelo front da Retirada (buscar-slots + agendar-slot precisam do mesmo token).
+// ─────────────────────────────────────────────
+app.post('/api/gerar-token', async (req, res) => {
+    const { cp_selection, ambiente } = req.body;
+    const ambienteResolvido = resolveAmbiente(ambiente);
+    if (!cp_selection) {
+        return res.status(400).json({ status: 'erro', message: 'cp_selection é obrigatório.' });
+    }
+    try {
+        const tokenData = await getTokenForCp(cp_selection, CLIENTS, ambienteResolvido);
+        if (!tokenData || !tokenData.access_token) {
+            return res.status(401).json({ status: 'erro', message: 'Não foi possível obter token para o CP selecionado.' });
+        }
+        res.json({
+            status:       'sucesso',
+            accessToken:  tokenData.access_token,
+            cp:           cp_selection,
+            ambiente:     ambienteResolvido
+        });
+    } catch (err) {
+        console.error('[APP] Erro ao gerar token:', err.message);
+        res.status(500).json({ status: 'erro', message: err.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/gerar-subscriber-id
+//   Retorna um subscriberId novo (TDMQAOSS + 8 chars ts + 2 chars random).
+//   Usado pelo front da Retirada antes do buscar-slots (V.tal exige subscriberId único por OS).
+// ─────────────────────────────────────────────
+app.get('/api/gerar-subscriber-id', (req, res) => {
+    try {
+        const subscriberId = gerarSubscriberId();
+        res.json({ status: 'sucesso', subscriberId });
+    } catch (err) {
+        console.error('[APP] Erro ao gerar subscriberId:', err.message);
+        res.status(500).json({ status: 'erro', message: err.message });
+    }
+});
+
+// ─────────────────────────────────────────────
 // POST /api/consultar-endereco
 // ─────────────────────────────────────────────
 app.post('/api/consultar-endereco', async (req, res) => {
@@ -205,8 +248,14 @@ app.post('/api/verificar-disponibilidade', async (req, res) => {
 // POST /api/buscar-slots
 // ─────────────────────────────────────────────
 app.post('/api/buscar-slots', async (req, res) => {
-    const { cp_selection, addressId, subscriberId, productType, accessToken, ambiente } = req.body;
+    const { cp_selection, addressId, subscriberId, associatedDocument, productType, accessToken, ambiente, orderType } = req.body;
     const ambienteResolvido = resolveAmbiente(ambiente);
+    const orderTypeFinal    = orderType || 'Instalacao';
+
+    // associatedDocument: a V.tal valida junto com subscriberId no searchTimeSlot.
+    // - Retirada com churn: vem do front (associatedDocument da Instalação original)
+    // - Instalação: pode vir undefined — fallback para o próprio subscriberId
+    const associatedDocumentFinal = associatedDocument || subscriberId;
 
     if (!cp_selection || !addressId || !subscriberId || !productType || !accessToken) {
         return res.status(400).json({ status: 'erro', message: 'Dados incompletos para buscar slots.' });
@@ -219,22 +268,16 @@ app.post('/api/buscar-slots', async (req, res) => {
             productType,
             accessToken,
             cp_selection,
-            ambienteResolvido
+            ambienteResolvido,
+            { orderType: orderTypeFinal, associatedDocument: associatedDocumentFinal }
         );
-
-        if (slotsResult && slotsResult.slots && slotsResult.slots.length > 0) {
-            res.json({
-                status:   'sucesso',
-                message:  'Slots disponíveis encontrados.',
-                slots:    slotsResult.slots,
-                ambiente: ambienteResolvido
-            });
-        } else {
-            res.status(404).json({ status: 'erro', message: 'Nenhum slot disponível encontrado.' });
-        }
-    } catch (error) {
-        console.error('[APP] Erro no backend ao buscar slots:', error);
-        res.status(500).json({ status: 'erro', message: error.message });
+        const listaSlots = (slotsResult && Array.isArray(slotsResult.slots))
+            ? slotsResult.slots
+            : (Array.isArray(slotsResult) ? slotsResult : []);
+        res.json({ status: 'sucesso', slots: listaSlots });
+    } catch (err) {
+        console.error('Erro ao buscar slots:', err);
+        res.status(500).json({ status: 'erro', message: err.message });
     }
 });
 
@@ -520,14 +563,15 @@ app.post('/api/agendar-slot', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// POST /api/criar-os
+// POST /api/criar-os  (v2 — lista de produtos)
 // ─────────────────────────────────────────────
 app.post('/api/criar-os', async (req, res) => {
     const {
         cp_selection,
         addressId,
         complementoSelecionado,
-        produtoSelecionado,
+        produtoSelecionado,    // ✅ retrocompat (singular)
+        produtos,              // ✅ novo: array de { catalogId }
         slotSelecionado,
         agendamentoId,
         accessToken,
@@ -539,38 +583,72 @@ app.post('/api/criar-os', async (req, res) => {
 
     const ambienteResolvido = resolveAmbiente(ambiente);
 
+    // ✅ Aceita ambos: lista nova (produtos) ou singular legado (produtoSelecionado)
+    const produtosParaEnvio = Array.isArray(produtos) && produtos.length > 0
+        ? produtos
+        : (produtoSelecionado ? [produtoSelecionado] : []);
+
+    if (produtosParaEnvio.length === 0) {
+        return res.status(400).json({
+            status:  'erro',
+            message: 'É obrigatório informar ao menos um produto (com Banda Larga — prefixo BL_).'
+        });
+    }
+
+    // ✅ Validação: ao menos 1 produto de Banda Larga (prefixo BL_)
+    const temBandaLarga = produtosParaEnvio.some(p => {
+        const id = typeof p === 'string' ? p : (p && p.catalogId);
+        return typeof id === 'string' && id.trim().toUpperCase().startsWith('BL_');
+    });
+    if (!temBandaLarga) {
+        return res.status(400).json({
+            status:  'erro',
+            message: 'A OS precisa ter ao menos um produto de Banda Larga (prefixo BL_).'
+        });
+    }
+
     try {
+        // Quando vier 1 produto só, mantemos compat com a chamada singular
+        const produtoUnico = produtosParaEnvio.length === 1 ? produtosParaEnvio[0] : produtoSelecionado;
+
+        const opcoes = {
+            ambiente: ambienteResolvido,
+            produtos: produtosParaEnvio
+        };
+
         const osResult = await criarOrdemServico(
             cp_selection,
             addressId,
             complementoSelecionado,
-            produtoSelecionado,
+            produtoUnico,
             slotSelecionado,
             agendamentoId,
             accessToken,
             subscriberId,
             inventoryId,
-            ambienteResolvido
+            opcoes
         );
 
         if (osResult && osResult.order && osResult.order.id) {
 
-            // ✅ Fallback garantido no bolsão
-            const associatedDocument =
-                osResult.order.associatedDocument || subscriberId;
+            const associatedDocument = osResult.order.associatedDocument || subscriberId;
+
+            const listaCatalogs = produtosParaEnvio
+                .map(p => (typeof p === 'string' ? p : p?.catalogId))
+                .filter(Boolean);
 
             const newOrder = {
                 orderId:            osResult.order.id,
                 saId:               agendamentoId,
                 correlationOrder:   osResult.order.correlationOrder,
-                associatedDocument, // ✅ sempre preenchido
+                associatedDocument,
                 cp:                 cp_selection,
                 ambiente:           ambienteResolvido,
                 subscriberId:       subscriberId,
-                productName:        produtoSelecionado.name,
-                productCatalogId:   produtoSelecionado.catalogId,
+                produtos:           listaCatalogs,
+                productName:        produtoSelecionado?.name || '',
+                productCatalogId:   produtoSelecionado?.catalogId || listaCatalogs[0] || '',
                 address: {
-                    // ✅ optional chaining — nunca quebra
                     streetName:      enderecoDetalhes?.streetName      || '',
                     streetNr:        enderecoDetalhes?.streetNr        || '',
                     neighborhood:    enderecoDetalhes?.neighborhood    || '',
@@ -580,33 +658,32 @@ app.post('/api/criar-os', async (req, res) => {
                     description:     enderecoDetalhes?.description     || ''
                 },
                 complement:   complementoSelecionado,
-                slotDate:     slotSelecionado.startDate,
+                slotDate:     slotSelecionado?.startDate,
                 creationDate: new Date().toISOString()
             };
 
-            // ✅ Salva no bolsão
             createdOrders.push(newOrder);
             try {
-    const subscriberAddressesRepo = require('./core/repositories/subscriberAddressesRepo');
-    subscriberAddressesRepo.upsert({
-        subscriberId: subscriberId,
-        ambiente: ambiente || 'TRG',
-        cp: cp_selection,
-        orderId: orderId,
-        correlationOrder: correlationOrder,
-        associatedDocument: associatedDocumentFinal,
-        addressId: addressId,
-        inventoryId: inventoryId,
-        complementType: complementoSelecionado?.type || null,
-        complementValue: complementoSelecionado?.value || null,
-        productCatalogId: produtoSelecionado?.catalogId || null,
-        flowType: 'Instalacao'
-    });
-    console.log(`[API] subscriber_addresses persistido para ${subscriberId} (orderId ${orderId})`);
-} catch (e) {
-    console.warn('[API] Falha ao persistir subscriber_addresses (Instalacao):', e.message);
-}
-
+                const subscriberAddressesRepo = require('./core/repositories/subscriberAddressesRepo');
+                subscriberAddressesRepo.upsert({
+                    subscriberId:        subscriberId,
+                    ambiente:            ambienteResolvido,
+                    cp:                  cp_selection,
+                    orderId:             osResult.order.id,
+                    correlationOrder:    osResult.order.correlationOrder,
+                    associatedDocument:  associatedDocument,
+                    addressId:           addressId,
+                    inventoryId:         inventoryId,
+                    complementType:      complementoSelecionado?.type || null,
+                    complementValue:     complementoSelecionado?.value || null,
+                    productCatalogId:    listaCatalogs[0] || produtoSelecionado?.catalogId || null,
+                    produtos:            listaCatalogs,
+                    flowType:            'Instalacao'
+                });
+                console.log(`[API] subscriber_addresses persistido para ${subscriberId} (orderId ${osResult.order.id}, produtos: ${listaCatalogs.length})`);
+            } catch (e) {
+                console.warn('[API] Falha ao persistir subscriber_addresses (Instalacao):', e.message);
+            }
 
             console.log(`[APP] ✅ OS salva no bolsão. Total: ${createdOrders.length}`);
             console.log('[APP] OS criada:', JSON.stringify(newOrder, null, 2));
@@ -616,8 +693,9 @@ app.post('/api/criar-os', async (req, res) => {
                 message:            'Ordem de Serviço criada com sucesso!',
                 orderId:            osResult.order.id,
                 saId:               agendamentoId,
-                associatedDocument,      // ✅ fallback garantido
-                subscriberId:       subscriberId, // ✅ explícito para o frontend
+                associatedDocument,
+                subscriberId:       subscriberId,
+                produtos:           listaCatalogs,
                 ambiente:           ambienteResolvido
             });
 
@@ -630,6 +708,193 @@ app.post('/api/criar-os', async (req, res) => {
         }
     } catch (error) {
         console.error('[APP] Erro ao criar Ordem de Serviço:', error.message);
+        res.status(500).json({ status: 'erro', message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/instalacoes-ativas  (dropdown do formulario de Retirada)
+// ─────────────────────────────────────────────
+app.get('/api/instalacoes-ativas', (req, res) => {
+    const ambiente = resolveAmbiente(req.query.ambiente);
+    try {
+        const repo = require('./core/repositories/subscriberAddressesRepo');
+        const rows = repo.listByFlowType('Instalacao', ambiente);
+        const itens = rows.map(r => ({
+            subscriberId:       r.subscriber_id,
+            ambiente:           r.ambiente,
+            cp:                 r.cp,
+            orderId:            r.order_id,
+            correlationOrder:   r.correlation_order,
+            associatedDocument: r.associated_document,
+            addressId:          r.address_id,
+            inventoryId:        r.inventory_id,
+            productCatalogId:   r.product_catalog_id,
+            produtos:           r.produtos || [],
+            createdAt:          r.created_at
+        }));
+        res.json({ status: 'sucesso', ambiente, total: itens.length, items: itens });
+    } catch (e) {
+        console.error('[APP] Erro ao listar instalacoes ativas:', e.message);
+        res.status(500).json({ status: 'erro', message: e.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/criar-os-retirada  (v5 — com agendamento opcional)
+//   Recebe { correlationOrderOriginal, cp_selection, ambiente, addressId?, inventoryId?,
+//            complementoSelecionado?, produtos?, atributos?, slotSelecionado?, agendamentoId? }.
+//   - Se slotSelecionado + agendamentoId vierem preenchidos: appointment é incluído no payload (churn).
+//   - Se não vierem: Retirada sistêmica (sem appointment, sem churn).
+//   Fluxo: token → buscar Instalacao no repo → criarOrdemServico → persistir com flowType=Retirada.
+// ─────────────────────────────────────────────
+app.post('/api/criar-os-retirada', async (req, res) => {
+    const {
+        correlationOrderOriginal,
+        cp_selection,
+        ambiente,
+        addressId,
+        inventoryId,
+        complementoSelecionado,
+        produtos,         // string[] | { catalogId, attributes? }[]
+        atributos,        // { catalogId: { attribute: [...] } }   <- v4
+        slotSelecionado,  // ✅ v5: opcional, presente se for Retirada com churn
+        agendamentoId     // ✅ v5: opcional
+    } = req.body;
+
+    const ambienteResolvido = resolveAmbiente(ambiente);
+
+    if (!correlationOrderOriginal) {
+        return res.status(400).json({ status: 'erro', message: 'correlationOrderOriginal e obrigatorio (identificador da OS de Instalacao original).' });
+    }
+    if (!cp_selection) {
+        return res.status(400).json({ status: 'erro', message: 'cp_selection e obrigatorio.' });
+    }
+
+    try {
+        const tokenData = await getTokenForCp(cp_selection, CLIENTS, ambienteResolvido);
+        if (!tokenData || !tokenData.access_token) {
+            return res.status(401).json({ status: 'erro', message: 'Nao foi possivel obter token para o CP selecionado.' });
+        }
+        const accessToken = tokenData.access_token;
+
+        const repo = require('./core/repositories/subscriberAddressesRepo');
+        const instalacaoOriginal = repo.findBySubscriberId(correlationOrderOriginal, ambienteResolvido);
+        if (!instalacaoOriginal) {
+            return res.status(404).json({
+                status:  'erro',
+                message: `Nenhuma Instalacao encontrada para subscriberId=${correlationOrderOriginal} no ambiente ${ambienteResolvido}. Verifique se a Instalacao original foi criada e esta persistida.`
+            });
+        }
+
+        const addressIdFinal   = addressId   || instalacaoOriginal.address_id;
+        const inventoryIdFinal = inventoryId || instalacaoOriginal.inventory_id;
+        let produtosFinais     = Array.isArray(produtos) && produtos.length
+                                  ? produtos
+                                  : (instalacaoOriginal.produtos || [instalacaoOriginal.product_catalog_id].filter(Boolean));
+        const complementoFinal = complementoSelecionado || (instalacaoOriginal.complement_type && instalacaoOriginal.complement_value
+                                  ? { type: instalacaoOriginal.complement_type, value: instalacaoOriginal.complement_value }
+                                  : null);
+
+        // v4: mescla o mapa `atributos` (vindo do front) nos produtos
+        if (atributos && typeof atributos === 'object') {
+            produtosFinais = produtosFinais.map(p => {
+                const cat = typeof p === 'string' ? p : p.catalogId;
+                const a = atributos[cat];
+                if (typeof p === 'string') return a ? { catalogId: p, attributes: a } : p;
+                return a ? { ...p, attributes: a } : p;
+            });
+        }
+
+        if (!addressIdFinal) {
+            return res.status(400).json({ status: 'erro', message: 'addressId nao resolvido (nem veio do front nem da Instalacao original).' });
+        }
+        if (!produtosFinais || produtosFinais.length === 0) {
+            return res.status(400).json({ status: 'erro', message: 'Nenhum produto resolvido para a Retirada. Informe produtos[] no body ou garanta que a Instalacao original tem produtos salvos.' });
+        }
+
+        const opcoes = {
+            orderType:                'Retirada',
+            correlationOrderOriginal: correlationOrderOriginal,
+            associatedDocument:       instalacaoOriginal.associated_document || correlationOrderOriginal,
+            produtos:                 produtosFinais
+        };
+
+        // ✅ v5: passa slotSelecionado e agendamentoId quando vierem (Retirada com churn)
+        const slotFinal        = slotSelecionado || null;
+        const agendamentoFinal = agendamentoId    || null;
+
+        const osResult = await criarOrdemServico(
+            cp_selection,
+            addressIdFinal,
+            complementoFinal,
+            null,                       // produtoSelecionado (singular) - nao usado
+            slotFinal,                  // ✅ v5: slot do agendamento (null se sem churn)
+            agendamentoFinal,           // ✅ v5: agendamentoId (null se sem churn)
+            accessToken,
+            correlationOrderOriginal,   // subscriberId da Instalacao original
+            inventoryIdFinal,
+            ambienteResolvido,
+            opcoes
+        );
+
+        if (osResult && osResult.order && osResult.order.id) {
+            const orderIdFinal            = osResult.order.id;
+            const correlationOrderFinal   = osResult.order.correlationOrder || osResult.correlationOrder;
+            const associatedDocumentFinal = osResult.associatedDocument || instalacaoOriginal.associated_document || correlationOrderOriginal;
+
+            repo.upsert({
+                subscriberId:        correlationOrderOriginal,
+                ambiente:            ambienteResolvido,
+                cp:                  cp_selection,
+                orderId:             orderIdFinal,
+                correlationOrder:    correlationOrderFinal,
+                associatedDocument:  associatedDocumentFinal,
+                addressId:           addressIdFinal,
+                inventoryId:         inventoryIdFinal,
+                complementType:      complementoFinal?.type || null,
+                complementValue:     complementoFinal?.value || null,
+                productCatalogId:    produtosFinais[0]?.catalogId || produtosFinais[0] || null,
+                produtos:            osResult.produtos || produtosFinais,
+                flowType:            'Retirada'
+            });
+
+            createdOrders.push({
+                orderId:            orderIdFinal,
+                saId:               agendamentoFinal,
+                correlationOrder:   correlationOrderFinal,
+                associatedDocument: associatedDocumentFinal,
+                cp:                 cp_selection,
+                ambiente:           ambienteResolvido,
+                subscriberId:       correlationOrderOriginal,
+                orderType:          'Retirada',
+                productName:        null,
+                productCatalogId:   produtosFinais[0]?.catalogId || produtosFinais[0] || null,
+                produtos:           osResult.produtos || produtosFinais,
+                creationDate:       new Date().toISOString()
+            });
+
+            res.json({
+                status:             'sucesso',
+                message:            'Ordem de Servico de Retirada criada com sucesso!',
+                orderId:            orderIdFinal,
+                saId:               agendamentoFinal,
+                associatedDocument: associatedDocumentFinal,
+                subscriberId:       correlationOrderOriginal,
+                orderType:          'Retirada',
+                produtos:           osResult.produtos || produtosFinais,
+                instalacaoOriginal: {
+                    subscriberId:       instalacaoOriginal.subscriber_id,
+                    associatedDocument: instalacaoOriginal.associated_document,
+                    produtos:           instalacaoOriginal.produtos
+                },
+                ambiente: ambienteResolvido
+            });
+        } else {
+            res.status(500).json({ status: 'erro', message: 'Resposta inesperada da API de OS (sem order.id).', raw: osResult });
+        }
+    } catch (error) {
+        console.error('[APP] Erro ao criar OS de Retirada:', error.message);
         res.status(500).json({ status: 'erro', message: error.message });
     }
 });
@@ -1093,8 +1358,122 @@ app.get('/api/suite2/trouble-ticket/:ttId/notificacoes', async (req, res) => {
   }
 });
 
-app.use('/api/fsl', require('./routes/fsl'));
+// ─────────────────────────────────────────────
+// 🟢 NOVO: Jobs de processamento em background
+//    Resolve o 504 do proxy: a request HTTP responde em ~200ms
+//    com um jobId, e o trabalho pesado roda em background.
+//    O frontend faz polling de progresso.
+// ─────────────────────────────────────────────
 
+const JOBS = new Map(); // jobId -> { status, total, processadas, ok, erro, ignorado, arquivo, erroMsg, startedAt, finishedAt }
+
+function criarJob() {
+    const jobId = `job_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    JOBS.set(jobId, {
+        status: 'iniciado',
+        total: 0,
+        processadas: 0,
+        ok: 0,
+        erro: 0,
+        ignorado: 0,
+        arquivo: null,
+        erroMsg: null,
+        startedAt: new Date().toISOString(),
+        finishedAt: null
+    });
+    // limpeza: remove jobs com mais de 2h para não vazar memória
+    setTimeout(() => JOBS.delete(jobId), 2 * 60 * 60 * 1000);
+    return jobId;
+}
+
+// POST /api/upload-viabilidade-lote/start
+// Aceita o mesmo FormData da rota antiga. Retorna { jobId } em ~200ms.
+// O processamento roda em background, sem segurar a request HTTP.
+app.post('/api/upload-viabilidade-lote/start', upload.single('spreadsheet'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ status: 'erro', message: 'Nenhum arquivo enviado.' });
+    }
+    const cp_selection      = String(req.body.cp_selection || '').trim();
+    const ambiente          = String(req.body.ambiente || 'TRG').trim();
+    const ambienteResolvido = (() => {
+        const VALID = ['TRG', 'TI', 'TRG2'];
+        const r = ambiente.toUpperCase();
+        return VALID.includes(r) ? r : 'TRG';
+    })();
+
+    if (!cp_selection) {
+        return res.status(400).json({ status: 'erro', message: 'CP de seleção é obrigatório.' });
+    }
+    if (!CLIENTS[cp_selection]) {
+        return res.status(400).json({ status: 'erro', message: `CP inválido: ${cp_selection}` });
+    }
+
+    const jobId = criarJob();
+    console.log(`[JOB] ${jobId} iniciado | cp: ${cp_selection} | ambiente: ${ambienteResolvido} | arquivo: ${req.file.originalname}`);
+
+    // Devolve IMEDIATAMENTE o jobId. O resto roda em background.
+    res.json({
+        status: 'sucesso',
+        jobId,
+        message: 'Job iniciado. Acompanhe pelo endpoint de progresso.'
+    });
+
+    // === Processamento em background ===
+    // Não usa await antes do res.json — o response já foi enviado.
+    (async () => {
+        try {
+            const result = await processarPlanilhaViabilidade(
+                req.file.path, cp_selection, CLIENTS, ambienteResolvido
+            );
+            const job = JOBS.get(jobId);
+            if (job) {
+                job.status = 'concluido';
+                job.arquivo = path.basename(result.resultFilePath || result);
+                job.finishedAt = new Date().toISOString();
+                console.log(`[JOB] ${jobId} concluído | arquivo: ${job.arquivo}`);
+            }
+        } catch (error) {
+            console.error(`[JOB] ${jobId} falhou:`, error.message);
+            const job = JOBS.get(jobId);
+            if (job) {
+                job.status = 'erro';
+                job.erroMsg = error.message;
+                job.finishedAt = new Date().toISOString();
+            }
+        }
+    })();
+});
+
+// GET /api/viabilidade-lote/progresso?jobId=xxx
+// O frontend chama a cada 2s. Retorna o estado atual do job.
+app.get('/api/viabilidade-lote/progresso', (req, res) => {
+    const jobId = String(req.query.jobId || '').trim();
+    if (!jobId) {
+        return res.status(400).json({ status: 'erro', message: 'jobId é obrigatório.' });
+    }
+    const job = JOBS.get(jobId);
+    if (!job) {
+        return res.status(404).json({ status: 'erro', message: 'Job não encontrado (ou expirou).' });
+    }
+    res.json({
+        status: 'sucesso',
+        jobId,
+        jobStatus: job.status,
+        total: job.total,
+        processadas: job.processadas,
+        ok: job.ok,
+        erro: job.erro,
+        ignorado: job.ignorado,
+        arquivo: job.arquivo,
+        erroMsg: job.erroMsg,
+        startedAt: job.startedAt,
+        finishedAt: job.finishedAt
+    });
+});
+
+app.use('/api/fsl', require('./routes/fsl'));
+app.use('/api/instalacao-encerramento', require('./routes/instalacao-encerramento'));
+app.use('/api/retirada-encerramento', require('./routes/retirada-encerramento'));
 // ─────────────────────────────────────────────
 // ✅ Iniciar servidor — 0.0.0.0 obrigatório no OpenShift
 // ─────────────────────────────────────────────

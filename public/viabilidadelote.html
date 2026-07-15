@@ -134,7 +134,20 @@
         <button id="downloadResultBtn" class="hidden" disabled onclick="baixarResultado()">
             ⬇️ Baixar Resultado
         </button>
-
+        <!-- Bloco da barra de progresso — adicione logo depois do processSpreadsheetBtn -->
+        <div id="progressBlock" class="progress-block hidden" style="margin-top: 16px;">
+            <div style="background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 24px; position: relative;">
+                <div id="progressBar"
+                    style="background: linear-gradient(90deg, #4caf50, #8bc34a);
+                            height: 100%; width: 0%; transition: width 0.3s ease;
+                            color: white; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold;">
+                    0%
+                </div>
+            </div>
+            <div id="progressText"
+                style="margin-top: 8px; font-size: 13px; color: #555; text-align: center;">
+            </div>
+        </div>
         <!-- Mensagem de status -->
         <div id="statusMessage" class="message hidden"></div>
     </div>

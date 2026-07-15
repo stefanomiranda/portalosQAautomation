@@ -1,8 +1,3 @@
-// core/ordemServico.js — SUBSTITUA A FUNÇÃO INTEIRA
-// ============================================================
-// SUBSTITUIR este bloco por inteiro. Cole em uploads/ordemServico.js
-// ============================================================
-
 // core/ordemServico.js
 const axios = require('axios');
 const https = require('https');
@@ -38,10 +33,8 @@ async function criarOrdemServico(
     const config = getConfigForEnv(ambiente);
     const apiUrl = config.BASE_PRODUCT_ORDER_URL;
 
-    // Gerar correlationOrder único
     const correlationOrder = subscriberId;
 
-    // Formatar datas
     const now = new Date();
     const offsetMinutes = now.getTimezoneOffset();
     const offsetSign = offsetMinutes > 0 ? '-' : '+';
@@ -51,23 +44,28 @@ async function criarOrdemServico(
 
     const associatedDocumentDate = `${now.toISOString().split('.')[0]}${timezoneOffset}`;
 
-    // ============================================================
-    // ✅ FIX (A) — Regra do doc:
-    //    Instalação:  associatedDocument = correlationOrder (igual)
-    //    Retirada:    associatedDocument = correlationOrderOriginal (vem do front)
-    //                 ou, na falta, cai para o correlationOrder
-    // ============================================================
     const orderTypeFinal = opcoes.orderType || "Instalacao";
     const infraTypeFinal = opcoes.infraType || 'FTTH';
     const addressReferenceFinal = opcoes.reference || "Próximo ao ponto de ônibus";
 
     const associatedDocumentFinal =
         orderTypeFinal === 'Retirada' && opcoes.associatedDocument
-            ? opcoes.associatedDocument          // ← Retirada usa o doc da Instalação
-            : correlationOrder;                    // ← Instalação continua como antes
+            ? opcoes.associatedDocument
+            : correlationOrder;
 
-    // ✅ FIX (C3) — appointment só vai no payload quando tem slot E agendamentoId
     const hasAppointment = !!(slotSelecionado && agendamentoId);
+
+    // ============================================================
+    // ✅ FIX CHAVE — normalizarProdutos lê de 3 fontes:
+    //   1) opcoes.produtos (array de 2 com VoIP) ← PREFERÊNCIA
+    //   2) produtoSelecionado como array (legado)
+    //   3) produtoSelecionado como objeto singular (legado)
+    // ============================================================
+    const produtosParaPayload = normalizarProdutos(
+        produtoSelecionado,
+        opcoes.produtos,
+        orderTypeFinal
+    );
 
     const requestBody = {
         order: {
@@ -76,23 +74,15 @@ async function criarOrdemServico(
             associatedDocumentDate: associatedDocumentDate,
             type: orderTypeFinal,
             infraType: infraTypeFinal,
-            // ============================================================
-            // ✅ FIX (C1) — addressChange.flag só em Instalação de Mudança de Endereço
-            // ============================================================
             ...(orderTypeFinal === 'Instalacao' && opcoes.addressChangeFlag && {
                 addressChange: { flag: true }
             }),
-            // ============================================================
-            // ✅ FIX (NOVO) — correlationOrderOriginal SEMPRE que vier
-            //    (é o que amarra a Retirada à Instalação original)
-            // ============================================================
             ...(opcoes.correlationOrderOriginal && {
                 correlationOrderOriginal: opcoes.correlationOrderOriginal
             }),
             customer: {
                 name: "Cliente Teste Portal OS",
                 subscriberId: subscriberId,
-                // ✅ FIX (B) — subscriberIdOld só em Instalação de Mudança de Endereço
                 ...(opcoes.subscriberIdOld && { subscriberIdOld: opcoes.subscriberIdOld }),
                 businessUnity: "varejo",
                 fantasyName: "Portal OS",
@@ -108,7 +98,6 @@ async function criarOrdemServico(
                     phone: ""
                 }
             },
-            // ✅ FIX (C3) — appointment condicional (sistêmica na Retirada)
             ...(hasAppointment && {
                 appointment: {
                     hasSlot: true,
@@ -128,18 +117,11 @@ async function criarOrdemServico(
                 }
             },
             products: {
-                product: [
-                    {
-                        catalogId: produtoSelecionado.catalogId,
-                        // ✅ FIX (C2) — Retirada usa action: 'remover' (Instalação usa 'adicionar')
-                        action: orderTypeFinal === 'Retirada' ? 'remover' : 'adicionar'
-                    }
-                ]
+                product: produtosParaPayload
             }
         }
     };
 
-    // Adicionar complemento se existir
     if (complementoSelecionado && complementoSelecionado.value && complementoSelecionado.type) {
         requestBody.order.addresses.address.complement.complements.push({
             type: complementoSelecionado.type,
@@ -154,7 +136,8 @@ async function criarOrdemServico(
     console.log(`  associatedDocument final: ${associatedDocumentFinal}`);
     console.log(`  orderType final: ${orderTypeFinal}`);
     console.log(`  hasAppointment: ${hasAppointment}`);
-    console.log(`  action final: ${requestBody.order.products.product[0].action}`);
+    // ✅ ESTA LINHA é a prova de que a versão nova está rodando
+    console.log(`  produtos (${produtosParaPayload.length}): ${produtosParaPayload.map(p => p.catalogId).join(', ')}`);
     if (opcoes.subscriberIdOld) {
         console.log(`  subscriberIdOld: ${opcoes.subscriberIdOld}`);
     }
@@ -189,7 +172,6 @@ async function criarOrdemServico(
 
         console.log('[ORDEM_SERVICO] Ordem de Serviço criada com sucesso:', response.data);
 
-        // ✅ FIX (D) — Retornar o correlationOrder junto com a resposta da V.tal
         return {
             ...response.data,
             correlationOrder: correlationOrder,
@@ -214,6 +196,38 @@ async function criarOrdemServico(
             throw new Error('Erro ao criar Ordem de Serviço: ' + error.message);
         }
     }
+}
+
+// ============================================================
+// ✅ normalizarProdutos — 3 fontes, com attributes preservados
+// ============================================================
+function normalizarProdutos(produtoSelecionado, opcoesProdutos, orderTypeFinal) {
+    const actionDefault = orderTypeFinal === 'Retirada' ? 'remover' : 'adicionar';
+
+    // 1) Preferência: opcoes.produtos (array vindo da rota /api/criar-os)
+    // 2) Fallback: produtoSelecionado (array legado)
+    // 3) Fallback: produtoSelecionado (objeto singular legado)
+    let lista = [];
+    if (Array.isArray(opcoesProdutos) && opcoesProdutos.length > 0) {
+        lista = opcoesProdutos;
+    } else if (Array.isArray(produtoSelecionado) && produtoSelecionado.length > 0) {
+        lista = produtoSelecionado;
+    } else if (produtoSelecionado && typeof produtoSelecionado === 'object') {
+        lista = [produtoSelecionado];
+    }
+
+    return lista
+        .filter(p => p && p.catalogId)
+        .map(p => {
+            const item = {
+                catalogId: p.catalogId,
+                action: p.action || actionDefault
+            };
+            if (p.attributes && typeof p.attributes === 'object') {
+                item.attributes = p.attributes;
+            }
+            return item;
+        });
 }
 
 module.exports = { criarOrdemServico };

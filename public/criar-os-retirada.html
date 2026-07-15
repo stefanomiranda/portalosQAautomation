@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal V.tal - Criar OS de Retirada</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 3px solid #f48fb1;
+            flex-wrap: wrap;
+        }
+        .page-header > div:first-child { flex: 1; min-width: 280px; }
+        .page-header h1 { margin: 0 0 6px 0; padding: 0; border: none; text-align: left; font-size: 1.9em; }
+        .page-header .subtitle { color: #555; font-size: 0.95em; margin: 0; }
+
+        .header-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+        .home-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 16px; background: #fff; color: #555;
+            border: 1px solid #ccc; border-radius: 20px;
+            text-decoration: none; font-size: 0.85em; font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s; font-family: inherit;
+        }
+        .home-link:hover { background: #FFD700; border-color: #FFD700; color: #212529; transform: translateY(-1px); text-decoration: none; }
+
+        .warning-box {
+            display: flex; align-items: flex-start; gap: 12px;
+            background: #fff8e1; border: 1px solid #FFD700; border-left: 5px solid #FFD700;
+            padding: 12px 16px; border-radius: 6px; margin-bottom: 22px; font-size: 0.92em; color: #7a6000;
+        }
+        .warning-box .icon { font-size: 1.4em; line-height: 1; }
+        .warning-box strong { color: #5a4500; }
+
+        .section-title {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.95em; font-weight: 700; color: #212529;
+            margin: 22px 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .section-title::before {
+            content: ''; display: inline-block; width: 4px; height: 22px;
+            background: #f48fb1; border-radius: 2px;
+        }
+
+        .form-card {
+            background: #fff; border: 1.5px solid #e0e0e0; border-radius: 10px;
+            padding: 22px 26px; margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .form-card h3 { margin: 0 0 4px 0; font-size: 1.05em; border: none; padding: 0; text-align: left; }
+        .form-card .form-card-desc { margin: 0 0 14px 0; color: #666; font-size: 0.88em; }
+
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .form-row > * { flex: 1; min-width: 180px; }
+
+        textarea {
+            width: 100%; min-height: 130px; padding: 10px 12px;
+            border: 1px solid #ccc; border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace; font-size: 0.92em;
+            resize: vertical; box-sizing: border-box; background: #fafafa;
+        }
+        textarea:focus { outline: none; border-color: #f48fb1; background: #fff; }
+
+        .preview-card {
+            background: #f8f9fa; border: 1px dashed #ccc; border-radius: 8px;
+            padding: 16px 20px; margin-top: 18px; font-size: 0.9em;
+        }
+        .preview-card h4 { margin: 0 0 10px 0; font-size: 0.95em; color: #555; }
+        .preview-card .preview-row { display: flex; gap: 18px; flex-wrap: wrap; margin: 4px 0; }
+        .preview-card .preview-row span { display: inline-block; }
+        .preview-card .preview-row strong { color: #212529; }
+
+        .actions-row { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+        .actions-row .btn-primary {
+            background: #d81b60; color: #fff; border: none; padding: 12px 24px;
+            border-radius: 6px; font-size: 1em; font-weight: 700; cursor: pointer; font-family: inherit;
+            box-shadow: 0 2px 8px rgba(216,27,96,0.25); transition: all 0.2s;
+        }
+        .actions-row .btn-primary:hover { background: #ad1457; transform: translateY(-1px); }
+        .actions-row .btn-primary:disabled { background: #ccc; cursor: not-allowed; transform: none; box-shadow: none; }
+        .actions-row .btn-secondary {
+            background: #fff; color: #555; border: 1px solid #ccc; padding: 12px 24px;
+            border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; font-family: inherit;
+        }
+        .actions-row .btn-secondary:hover { background: #f5f5f5; }
+
+        .empty-state {
+            text-align: center; padding: 28px; color: #999; font-size: 0.9em;
+            background: #fafafa; border-radius: 6px; border: 1px dashed #e0e0e0;
+        }
+
+        .result-box {
+            margin-top: 24px; padding: 18px; border-radius: 8px;
+            background: #e8f5e9; border: 1px solid #28a745; color: #1a5c2a;
+        }
+        .result-box.error { background: #ffebee; border-color: #c62828; color: #b71c1c; }
+        .result-box pre { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 4px; overflow: auto; font-size: 0.85em; margin: 8px 0 0 0; }
+
+        .agendamento-card .form-card-desc { margin-top: 6px; }
+        .slot-pill {
+            display: inline-block; padding: 4px 10px; background: #fce4ec; color: #880e4f;
+            border-radius: 14px; font-size: 0.85em; font-weight: 600; margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header class="page-header">
+        <div>
+            <h1>📤 Criar Ordem de Serviço — Retirada</h1>
+            <p class="subtitle">Cria uma OS de Retirada amarrada a uma Instalação ativa. Pré-condição: a Instalação original precisa estar criada e persistida no portal.</p>
+        </div>
+        <div class="header-actions">
+            <a href="selecionar-tipo-os.html" class="home-link">⬅ Voltar para seleção</a>
+            <a href="index.html" class="home-link">🏠 Home</a>
+        </div>
+    </header>
+
+    <div class="warning-box">
+        <span class="icon">⚠️</span>
+        <div>
+            <strong>Pré-condição importante:</strong> a Retirada só funciona se existir
+            uma <strong>Instalação ativa</strong> na V.tal para o mesmo <code>subscriberId</code>.
+            Sem isso, a V.tal retorna <code>406 - Identificador da instalação inativo ou inexistente</code>.
+            Recomendamos selecionar a Instalação da lista abaixo (vem do bolsão) ou
+            informar manualmente o <code>correlationOrder</code> da Instalação original.
+        </div>
+    </div>
+
+    <div class="section-title"><span>Ambiente e CP</span></div>
+    <div class="form-card">
+        <div class="form-row">
+            <div>
+                <label for="ambienteSelect">Ambiente</label>
+                <select id="ambienteSelect">
+                    <option value="TRG">🟡 TRG</option>
+                    <option value="TI">🟢 TI</option>
+                    <option value="TRG2">🔵 TRG2</option>
+                </select>
+            </div>
+            <div>
+                <label for="cpSelect">CP (Cliente Parceiro)</label>
+                <select id="cpSelect"><option value="">Carregando CPs...</option></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title"><span>Instalação original</span></div>
+    <div class="form-card">
+        <h3>📦 Do bolsão (Instalações persistidas)</h3>
+        <p class="form-card-desc">Selecione a Instalação original da lista. O portal preenche automaticamente a lista de produtos e o <code>correlationOrder</code>.</p>
+        <div class="form-row">
+            <div style="flex: 2;">
+                <label for="instalacaoBolsaoSelect">Instalação ativa</label>
+                <select id="instalacaoBolsaoSelect">
+                    <option value="">— Carregando instalações ativas... —</option>
+                </select>
+            </div>
+            <div>
+                <button type="button" id="btnRecarregarBolsao" class="btn-secondary" style="margin-top: 24px;">🔄 Recarregar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <h3>✍️ Ou informar manualmente</h3>
+        <p class="form-card-desc">Se preferir, digite o <code>correlationOrder</code> / <code>subscriberId</code> e o <code>associatedDocument</code> da Instalação original. <strong>Aviso:</strong> sem Instalação persistida, o sistema não consegue sugerir a lista de produtos — você terá que informar manualmente abaixo.</p>
+        <div class="form-row">
+            <div>
+                <label for="correlationOrderOriginalInput">Correlation Order / SubscriberId da Instalação original *</label>
+                <input type="text" id="correlationOrderOriginalInput" placeholder="Ex: 20260305TH05">
+            </div>
+            <div>
+                <label for="associatedDocumentInput">Associated Document *</label>
+                <input type="text" id="associatedDocumentInput" placeholder="Ex: 20260305TH05">
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title"><span>Produtos a remover</span></div>
+    <div class="form-card">
+        <h3>📋 Lista de produtos</h3>
+        <p class="form-card-desc">Um <code>catalogId</code> por linha. A lista é sugerida com base na Instalação original (se encontrada), mas você pode editar — útil se a Instalação tinha mais produtos do que o portal conseguiu salvar.</p>
+        <label for="produtosTextarea">Produtos (catalogId, um por linha) *</label>
+        <textarea id="produtosTextarea" placeholder="BL_400MB&#10;MESH_1P&#10;ROKU"></textarea>
+    </div>
+
+    <div class="form-card" id="atributosCard" style="display:none;">
+        <h3>🧩 Atributos por produto</h3>
+        <p class="form-card-desc">JSON com chaves sendo o <code>catalogId</code> e valor sendo o objeto de attributes exigido pela V.tal. Ex: <code>VoIP</code> exige <code>voipNumber</code>. Pré-populado automaticamente quando algum produto selecionado tem template conhecido; voce pode editar.</p>
+        <label for="atributosTextarea">Atributos (JSON)</label>
+        <textarea id="atributosTextarea" placeholder='{ "VoIP": { "attribute": [ { "name": "voipNumber", "value": "" } ] } }'></textarea>
+        <div id="atributosValidacao" style="margin-top:6px; font-size:0.85em;"></div>
+    </div>
+
+    <div class="form-card agendamento-card">
+        <div class="form-row" style="align-items: center;">
+            <div style="flex: 0 0 auto;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+                    <input type="checkbox" id="temAgendamentoCheckbox">
+                    <span>📅 Tem agendamento? (churn de cliente — técnico vai buscar o equipamento)</span>
+                </label>
+            </div>
+        </div>
+        <div id="blocoAgendamento" style="display: none; margin-top: 16px;">
+            <p class="form-card-desc">Quando marcado, o portal gera um novo <code>subscriberId</code> e busca slots de agendamento na V.tal. Selecione um slot e agende antes de criar a OS.</p>
+            <div class="form-row">
+                <div style="flex: 2;">
+                    <label for="slotsSelect">Slots disponíveis</label>
+                    <select id="slotsSelect">
+                        <option value="">— Busque slots primeiro —</option>
+                    </select>
+                </div>
+                <div style="flex: 0 0 auto; display: flex; gap: 8px;">
+                    <button type="button" id="btnBuscarSlots" class="btn-secondary">📅 Buscar Slots</button>
+                    <button type="button" id="btnAgendarSlot" class="btn-secondary">📌 Agendar este slot</button>
+                </div>
+            </div>
+            <div id="slotsTabela"></div>
+            <div id="agendamentoInfo" style="margin-top: 8px; font-size: 0.88em;"></div>
+        </div>
+    </div>
+
+    <div class="section-title"><span>Pré-visualização</span></div>
+    <div class="preview-card" id="previewCard">
+        <h4>Como o payload chegará na V.tal:</h4>
+        <div class="preview-row"><span>🌐 Ambiente: <strong id="prevAmb">—</strong></span></div>
+        <div class="preview-row"><span>🏢 CP: <strong id="prevCp">—</strong></span></div>
+        <div class="preview-row"><span>📋 Order type: <strong>Retirada</strong></span></div>
+        <div class="preview-row"><span>🔗 correlationOrderOriginal: <strong id="prevCorrOrig">—</strong></span></div>
+        <div class="preview-row"><span>📄 associatedDocument: <strong id="prevAssoc">—</strong></span></div>
+        <div class="preview-row"><span>📦 Produtos: <strong id="prevProds">—</strong></span></div>
+        <div class="preview-row"><span>📅 Slot: <strong id="prevSlot">—</strong></span></div>
+        <div class="preview-row"><span>📌 Agendamento: <strong id="prevAgendamento">—</strong></span></div>
+    </div>
+
+    <div class="actions-row">
+        <button type="button" id="btnCriar" class="btn-primary" disabled>📤 Criar OS de Retirada</button>
+        <button type="button" id="btnLimpar" class="btn-secondary">🔄 Limpar formulário</button>
+    </div>
+
+    <div id="resultado"></div>
+
+</div>
+
+<script src="js/criar-os-retirada.js"></script>
+</body>
+</html>

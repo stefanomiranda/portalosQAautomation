@@ -11,7 +11,29 @@ let currentComplementoSelecionado  = null;
 let currentAccessToken             = null;
 let currentSubscriberId            = null;
 let currentProdutosDisponiveis     = [];
-let currentProdutoSelecionado      = null;
+let currentProdutosSelecionados   = [];   // ✅ v3: array de produtos (suporta BL_+VoIP)
+const ATTRIBUTES_TEMPLATES = {
+    // Catálogos que exigem attributes além de catalogId
+    'VoIP': { attribute: [{ name: 'voipNumber', value: '99999999999' }] }  // ✅ v5: número fixo (placeholder interno)
+};
+const CATEGORIA_POR_CATALOG = {
+  'BL_':    'Banda Larga',   // BL_400MB, BL_600MB, BL_1GB, ...
+  'MESH_':  'Banda Larga',
+  'FTTR_':  'Banda Larga',
+  'VoIP':   'VoIP',
+  'PABX':   'VoIP',
+  'TV_':    'IPTV',
+  'IPTV_':  'IPTV',
+  'ROKU':   'IPTV'
+};
+
+function categoriaDoProduto(catalogId) {
+  if (!catalogId) return 'Banda Larga';
+  for (const prefixo in CATEGORIA_POR_CATALOG) {
+    if (catalogId.startsWith(prefixo)) return CATEGORIA_POR_CATALOG[prefixo];
+  }
+  return 'Banda Larga';
+}
 let currentSlotsDisponiveis        = [];
 let currentSlotSelecionado         = null;
 let currentAgendamentoId           = null;
@@ -67,6 +89,42 @@ function updateAmbienteBadge(ambiente) {
         TRG2: '🔵 TRG2'
     };
     badgeText.textContent = labels[ambiente] || ambiente;
+}
+
+// ─────────────────────────────────────────────
+// ✅ v3: Templates / parsing / validação de attributes
+// ─────────────────────────────────────────────
+function templatePara(catalogId) {
+    return ATTRIBUTES_TEMPLATES[catalogId] || null;
+}
+
+function parseAtributosSeguros(texto) {
+    if (!texto || !texto.trim()) return null;
+    try {
+        return JSON.parse(texto);
+    } catch (e) {
+        return { __erro: 'JSON inválido: ' + e.message };
+    }
+}
+
+function atributosLinhaValidos(produto) {
+    // Se o catálogo não tem template, sem requirements
+    if (!templatePara(produto.catalogId)) return true;
+    // Se tem template, attributes é obrigatório e deve ter o mesmo shape do template
+    if (!produto.attributes) return false;
+    const tmplAttrs = templatePara(produto.catalogId).attribute || [];
+    const linhaAttrs = (produto.attributes.attribute || []);
+    // Mesma quantidade de atributos exigidos
+    if (tmplAttrs.length !== linhaAttrs.length) return false;
+    // Nenhum value vazio
+    for (let i = 0; i < tmplAttrs.length; i++) {
+        if (!linhaAttrs[i] || !String(linhaAttrs[i].value || '').trim()) return false;
+    }
+    return true;
+}
+
+function catalogoEhBandaLarga(catalogId) {
+    return /^BL_/i.test(String(catalogId || ''));
 }
 
 // ─────────────────────────────────────────────
@@ -304,55 +362,125 @@ async function verificarDisponibilidade() {
 // ─────────────────────────────────────────────
 // Etapa 4: Exibir e Confirmar Produto
 // ─────────────────────────────────────────────
+// ✅ v3: lista de produtos (cada item tem catalogId + attributes opcionais)
 function displayProducts(products) {
-    const productListDiv = document.getElementById('productList');
-    productListDiv.innerHTML = '';
+    window.__produtosCatalogo = products || [];
+    currentProdutosSelecionados = [];
+    renderLinhasProduto();
+    atualizarBotaoConfirmar();
+}
 
-    if (!products || products.length === 0) {
-        productListDiv.innerHTML = '<p>Nenhum produto disponível para este endereço.</p>';
-        document.getElementById('confirmProductBtn').disabled = true;
-        return;
+// Renderiza todas as linhas de produto
+function renderLinhasProduto() {
+    const productListDiv = document.getElementById('productList');
+    const attrsDiv       = document.getElementById('attributesTemplates');
+    if (!productListDiv) return;
+    productListDiv.innerHTML = '';
+    if (attrsDiv) attrsDiv.innerHTML = '';
+
+    if (currentProdutosSelecionados.length === 0) {
+        // Primeira linha com BL_400MB sugerido se existir no catálogo
+        const sugestao = (window.__produtosCatalogo || []).find(p => /^BL_/i.test(p.catalogId)) || (window.__produtosCatalogo || [])[0];
+        if (sugestao) {
+            currentProdutosSelecionados.push({ catalogId: sugestao.catalogId, attributes: templatePara(sugestao.catalogId) ? JSON.parse(JSON.stringify(templatePara(sugestao.catalogId))) : null });
+        }
     }
 
-    products.forEach(product => {
-        const productItem = document.createElement('div');
-        productItem.className           = 'product-item';
-        productItem.dataset.catalogId   = product.catalogId;
-        productItem.dataset.name        = product.name;
-        productItem.dataset.type        = product.type;
-        productItem.dataset.technology  = product.technology;
-        productItem.dataset.inventoryId = product.inventoryId;
+    currentProdutosSelecionados.forEach((produto, idx) => {
+        const row = document.createElement('div');
+        row.className = 'product-row';
+        row.dataset.idx = idx;
 
-        const bestOfferTag = product.best_offer
-            ? '<span class="best-offer-tag">⭐ Melhor Oferta!</span>'
-            : '';
+        const isBL = catalogoEhBandaLarga(produto.catalogId);
+        const tagBL = isBL ? '<span class="bl-tag" style="background:#d4edda;color:#155724;padding:2px 6px;border-radius:4px;font-size:12px;margin-left:6px;">BL ✓</span>' : '';
+        const tmpl = templatePara(produto.catalogId);
+        const temTmpl = !!tmpl;
+        const tagTmpl = temTmpl ? '<span class="attr-tag" style="background:#fff3cd;color:#856404;padding:2px 6px;border-radius:4px;font-size:12px;margin-left:4px;">Atributos obrigatórios</span>' : '';
 
-        productItem.innerHTML = `
-            <h3>${product.name} (${product.catalogId}) ${bestOfferTag}</h3>
-            <p>Tipo: ${product.type} | Tecnologia: ${product.technology}</p>
+        row.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px;border:1px solid #e0e0e0;border-radius:6px;margin-bottom:8px;">
+                <select class="prod-catalog" data-idx="${idx}" style="flex:1;min-width:160px;">
+                    ${(window.__produtosCatalogo || []).map(p => {
+                        const sel = p.catalogId === produto.catalogId ? 'selected' : '';
+                        return `<option value="${p.catalogId}" ${sel}>${p.name || p.catalogId} (${p.catalogId})</option>`;
+                    }).join('')}
+                </select>
+                ${tagBL}${tagTmpl}
+                <button type="button" class="remove-prod" data-idx="${idx}" style="background:#dc3545;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;">✕ Remover</button>
+            </div>
         `;
+        productListDiv.appendChild(row);
 
-        productItem.addEventListener('click', () => {
-            document.querySelectorAll('.product-item').forEach(i => i.classList.remove('selected'));
-            productItem.classList.add('selected');
-            document.getElementById('confirmProductBtn').disabled = false;
-            currentProdutoSelecionado = {
-                catalogId:   productItem.dataset.catalogId,
-                name:        productItem.dataset.name,
-                type:        productItem.dataset.type,
-                technology:  productItem.dataset.technology,
-                inventoryId: productItem.dataset.inventoryId
+        // Se o catálogo exige attributes, renderiza o bloco de attributes
+        if (temTmpl) {
+            // ✅ v5: não renderiza mais o textarea — número VoIP é fixo
+            const bloco = document.createElement('div');
+            bloco.className = 'product-attrs-info';
+            bloco.style.cssText = 'font-size:12px;color:#856404;padding:4px 14px 10px;margin:-4px 0 8px 0;';
+            bloco.textContent = `Número VoIP de placeholder: 99999999999 (atributos preenchidos automaticamente)`;
+            productListDiv.appendChild(bloco);
+        }
+    });
+
+    // Listeners
+    productListDiv.querySelectorAll('.prod-catalog').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+            const idx = Number(e.target.dataset.idx);
+            const novo = e.target.value;
+            currentProdutosSelecionados[idx] = {
+                catalogId: novo,
+                attributes: templatePara(novo) ? JSON.parse(JSON.stringify(templatePara(novo))) : null
             };
+            renderLinhasProduto();
         });
-        productListDiv.appendChild(productItem);
+    });
+    productListDiv.querySelectorAll('.remove-prod').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const idx = Number(e.target.dataset.idx);
+            currentProdutosSelecionados.splice(idx, 1);
+            renderLinhasProduto();
+            atualizarBotaoConfirmar();
+        });
     });
 }
 
-async function confirmarProduto() {
-    if (!currentProdutoSelecionado) {
-        showMessage('Por favor, selecione um produto.', 'error');
+
+function adicionarLinhaProduto() {
+    if (!window.__produtosCatalogo || window.__produtosCatalogo.length === 0) {
+        showMessage('Nenhum produto disponível para adicionar.', 'error');
         return;
     }
+    const primeiro = window.__produtosCatalogo[0];
+    currentProdutosSelecionados.push({
+        catalogId: primeiro.catalogId,
+        attributes: templatePara(primeiro.catalogId) ? JSON.parse(JSON.stringify(templatePara(primeiro.catalogId))) : null
+    });
+    renderLinhasProduto();
+    atualizarBotaoConfirmar();
+}
+
+function atualizarBotaoConfirmar() {
+    const btn = document.getElementById('confirmProductBtn');
+    if (!btn) return;
+    const temProdutos = currentProdutosSelecionados.length > 0;
+    const temBL = currentProdutosSelecionados.some(p => catalogoEhBandaLarga(p.catalogId));
+    const semDuplicatas = new Set(currentProdutosSelecionados.map(p => p.catalogId)).size === currentProdutosSelecionados.length;
+    // ✅ v5: attributes vem do template hardcoded, sempre preenchido
+    btn.disabled = !(temProdutos && temBL && semDuplicatas);
+}
+
+async function confirmarProduto() {
+    if (currentProdutosSelecionados.length === 0) {
+        showMessage('Adicione pelo menos 1 produto.', 'error');
+        return;
+    }
+    const temBL = currentProdutosSelecionados.some(p => catalogoEhBandaLarga(p.catalogId));
+    if (!temBL) {
+        showMessage('Adicione pelo menos 1 produto de Banda Larga (BL_).', 'error');
+        return;
+    }
+    // ✅ v5: attributes vem preenchido do template (VoIP = 99999999999)
+    currentProdutoSelecionado = currentProdutosSelecionados[0];
     showMessage('⏳ Buscando slots de agendamento...', 'info');
     await buscarSlots();
 }
@@ -362,17 +490,28 @@ async function confirmarProduto() {
 // ─────────────────────────────────────────────
 async function buscarSlots() {
     try {
+        // ✅ Pega o primeiro produto BL_ da lista (regra: >=1 BL_)
+        //    Fallback: primeiro produto da lista, depois 'Banda Larga'.
+        const produtoBandaLarga = (currentProdutosSelecionados || [])
+            .find(p => p && p.catalogId && p.catalogId.startsWith('BL_'));
+        const catalogIdEscolhido = (produtoBandaLarga || currentProdutosSelecionados[0] || {}).catalogId;
+        const productType        = categoriaDoProduto(catalogIdEscolhido);
+
+        const requestBody = {
+            cp_selection: currentCpSelection,
+            addressId:    currentAddressId,
+            subscriberId: currentSubscriberId,
+            productType,                          // ✅ categoria ("Banda Larga"), não catalogId
+            accessToken:  currentAccessToken,
+            ambiente:     currentAmbiente
+        };
+
+        console.log('[FRONTEND] Request buscar-slots:', requestBody);
+
         const response = await fetch('/api/buscar-slots', {
-            method: 'POST',
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                cp_selection: currentCpSelection,
-                addressId:    currentAddressId,
-                subscriberId: currentSubscriberId,
-                productType:  currentProdutoSelecionado.type,
-                accessToken:  currentAccessToken,
-                ambiente:     currentAmbiente // ✅ Envia ambiente
-            })
+            body:    JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -502,9 +641,16 @@ function displayOrderConfirmation() {
             ? `${currentComplementoSelecionado.type}: ${currentComplementoSelecionado.value}`
             : 'N/A';
 
-    document.getElementById('confirmProduct').textContent =
-        `${currentProdutoSelecionado.name} (${currentProdutoSelecionado.catalogId}) — ` +
-        `Tecnologia: ${currentProdutoSelecionado.technology}`;
+    const listaStr = currentProdutosSelecionados
+        .map(p => {
+            const cat = window.__produtosCatalogo ? window.__produtosCatalogo.find(x => x.catalogId === p.catalogId) : null;
+            const nome = cat ? cat.name : p.catalogId;
+            const tech = cat && cat.technology ? ` — Tecnologia: ${cat.technology}` : '';
+            const bl = catalogoEhBandaLarga(p.catalogId) ? ' [BL]' : '';
+            return `${nome} (${p.catalogId})${bl}${tech}`;
+        })
+        .join('; ');
+    document.getElementById('confirmProduct').textContent = listaStr;
 
     const startDate  = new Date(currentSlotSelecionado.startDate);
     const finishDate = new Date(currentSlotSelecionado.finishDate);
@@ -532,7 +678,8 @@ async function criarOrdemDeServico() {
                 cp_selection:           currentCpSelection,
                 addressId:              currentAddressId,
                 complementoSelecionado: currentComplementoSelecionado,
-                produtoSelecionado:     currentProdutoSelecionado,
+                produtos:               currentProdutosSelecionados,  // ✅ v3: array (suporta attributes)
+                produtoSelecionado:     currentProdutosSelecionados[0] || null, // retrocompat
                 slotSelecionado:        currentSlotSelecionado,
                 agendamentoId:          currentAgendamentoId,
                 accessToken:            currentAccessToken,
@@ -586,6 +733,7 @@ function resetFlow() {
     currentAccessToken            = null;
     currentSubscriberId           = null;
     currentProdutosDisponiveis    = [];
+    currentProdutosSelecionados   = [];
     currentProdutoSelecionado     = null;
     currentSlotsDisponiveis       = [];
     currentSlotSelecionado        = null;

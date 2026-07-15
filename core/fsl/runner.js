@@ -1,8 +1,21 @@
 // core\fsl\runner.js
 //
 // Orquestrador do fluxo FSL.
-// Gera um token 2FA, passa para o step de login, executa os 8 steps
-// sequencialmente, devolve { saId, senha, steps, logs, twoFaToken }.
+//
+// MUDANÇA (state-aware):
+//   Antes: executava os 8 steps em ordem fixa. Quebrava quando a SA
+//   já estava em estado intermediário (ex: "Running" → anteciparStatus
+//   falhava com "botão Antecipação não encontrado" e matava o fluxo).
+//
+//   Agora: o runner continua chamando steps na mesma interface
+//   (`stepMod.step(ctx)`), mas a lista de steps muda:
+//     - login (sempre)
+//     - buscarSA (sempre)
+//     - orquestradorPosSA (substitui os 5 steps seguintes e decide
+//       adaptativamente o que rodar com base no estado real da SA)
+//
+//   O `pickSteps` faz a curadoria. O `for...of` continua igualzinho.
+//   dryRun === 'login' continua retornando só o login.
 
 const crypto = require('crypto');
 const FSL_CONFIG = require('./config');
@@ -18,11 +31,27 @@ function makeRunnerLogger(logger) {
   };
 }
 
+/**
+ * Seleciona a lista de steps a executar.
+ *
+ *   - dryRun === 'login' → só login
+ *   - fluxo completo    → [login, buscarSA, orquestradorPosSA]
+ *
+ *   O orquestradorPosSA cuida de antecipar / concluir / consumo /
+ *   encerramento lendo o estado real da SA na página (botões
+ *   visíveis, campo Status). Os 5 módulos de step individuais
+ *   continuam existindo — o orquestrador só os chama de forma
+ *   adaptativa.
+ */
 function pickSteps(dryRun) {
   if (dryRun === 'login') {
     return STEPS.filter(s => s.name === 'login');
   }
-  return STEPS;
+  return STEPS.filter(s =>
+    s.name === 'login' ||
+    s.name === 'buscarSA' ||
+    s.name === 'orquestradorPosSA'
+  );
 }
 
 async function run(input, baseLogger = console) {

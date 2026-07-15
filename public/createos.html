@@ -61,11 +61,13 @@
     </div>
 
     <div class="section hidden" id="productSelection">
-        <h2>3. Escolha o Produto</h2>
+        <h2>3. Escolha os Produtos</h2>
+        <p class="hint">Adicione um ou mais produtos. <strong>Pelo menos 1 produto de Banda Larga (BL_*) é obrigatório</strong>. Para <em>VoIP</em>, o número é preenchido automaticamente.</p>
         <div id="productList"></div>
         <div style="margin-top:15px;">
+            <button type="button" onclick="adicionarLinhaProduto()">+ Adicionar produto</button>
             <button onclick="voltarPara('complementSelection', 2)">&larr; Voltar</button>
-            <button onclick="confirmarProduto()" id="confirmProductBtn" disabled>Confirmar Produto &rarr;</button>
+            <button onclick="confirmarProduto()" id="confirmProductBtn" disabled>Confirmar Produtos &rarr;</button>
         </div>
     </div>
 

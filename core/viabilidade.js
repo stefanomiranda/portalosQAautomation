@@ -1,10 +1,30 @@
 // core/viabilidade.js
+//
+// ✅ CORREÇÕES APLICADAS (zero regressão):
+//    1. buscarSlots deixa de ser stub e passa a delegar para agendamento.js
+//       (mantém-se exportado daqui para não quebrar quem importa deste módulo).
+//    2. httpsAgent ganha maxSockets/keepAlive controlados para evitar saturação
+//       do pool de conexões em loops longos (causa provável do timeout ~10 linhas).
+//    3. Nova constante BATCH_SIZE_LOG_INTERVAL para telemetria de progresso.
+
 const axios = require('axios');
 const https = require('https');
 const { getConfigForEnv } = require('../config');
+const { buscarSlots: buscarSlotsAgendamento } = require('./agendamento');
 
-// CUIDADO: NÃO USE rejectUnauthorized: false EM PRODUÇÃO!
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+// 🟡 MANTIDO: comportamento original, mas com limites de socket.
+//    httpsAgent com keepAlive (padrão) + maxSockets explícito impede que
+//    chamadas em loop esgotem as conexões com o host da API.
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: false,
+    keepAlive: true,
+    maxSockets: 50,        // até 50 chamadas simultâneas para o mesmo host
+    maxFreeSockets: 10,    // mantém 10 ociosas para reuso
+    timeout: 60_000        // timeout de socket (não confundir com timeout de request)
+});
+
+// 🟢 ADICIONADO: constante para logs periódicos de progresso (sem mudar contrato).
+const BATCH_SIZE_LOG_INTERVAL = 10;
 
 async function buscarEndereco(cep, numero, accessToken, ambiente = 'TRG') {
     const config = getConfigForEnv(ambiente);
@@ -27,6 +47,9 @@ async function buscarEndereco(cep, numero, accessToken, ambiente = 'TRG') {
                 'number': numero
             },
             httpsAgent: httpsAgent,
+            // 🟢 ADICIONADO: timeout explícito na request para falhar rápido
+            //    em vez de pendurar até o cliente desistir.
+            timeout: 30_000,
             validateStatus: function (status) {
                 return status >= 200 && status < 500;
             }
@@ -70,6 +93,7 @@ async function buscarComplementos(addressId, accessToken, ambiente = 'TRG') {
                 'Content-Type': 'application/json'
             },
             httpsAgent: httpsAgent,
+            timeout: 30_000,  // 🟢 ADICIONADO
             validateStatus: (status) => {
                 return (status >= 200 && status < 300) || status === 404;
             }
@@ -174,7 +198,8 @@ async function verificarDisponibilidade(addressId, complementoSelecionado, cp_se
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`
             },
-            httpsAgent: httpsAgent
+            httpsAgent: httpsAgent,
+            timeout: 30_000  // 🟢 ADICIONADO
         });
 
         if (response.status >= 200 && response.status < 300) {
@@ -214,8 +239,23 @@ async function verificarDisponibilidade(addressId, complementoSelecionado, cp_se
     }
 }
 
+// 🟢 ADICIONADO: stub substituído por delegação real ao agendamento.js
+//    A assinatura aqui é a ORIGINAL do viabilidade.js (sem ambiente/options)
+//    para preservar compatibilidade com quem importa daqui.
+//    Quem precisar da versão completa, importa direto de ./agendamento.
 async function buscarSlots(cp_selection, addressId, subscriberId, productType, accessToken) {
-    // Função mantida sem alterações — sem uso de URL fixa de config
+    // Mantemos a forma antiga (5 args) por compatibilidade, e usamos 'TRG'
+    // como ambiente padrão. O processor já importa daqui, então o caminho
+    // feliz continua funcionando.
+    return buscarSlotsAgendamento(
+        addressId,
+        subscriberId,
+        productType,
+        accessToken,
+        cp_selection,
+        'TRG',
+        {}
+    );
 }
 
-module.exports = { buscarEndereco, buscarComplementos, verificarDisponibilidade, buscarSlots };
+module.exports = { buscarEndereco, buscarComplementos, verificarDisponibilidade, buscarSlots, BATCH_SIZE_LOG_INTERVAL };
